@@ -1,0 +1,222 @@
+// Hisab-Kitab — Personal Finance Ledger
+// Prisma schema (PostgreSQL / Supabase)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────────────────────────
+// User
+// ─────────────────────────────────────────────
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  name      String?
+  // Guards the weekly savings digest (lib/email/notify.ts) so a daily
+  // cron run — or the dashboard's lazy fallback — only sends once every
+  // 7 days rather than once per run.
+  lastSavingsReminderAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts              Account[]
+  categories            Category[]
+  transactions          Transaction[]
+  savings               Saving[]
+  recurringTransactions RecurringTransaction[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────
+// Accounts / Wallets
+// ─────────────────────────────────────────────
+
+enum AccountType {
+  BANK
+  MOBILE_WALLET
+  CASH
+  OTHER
+}
+
+model Account {
+  id             String      @id @default(uuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  type           AccountType @default(OTHER)
+  openingBalance Decimal     @default(0) @db.Decimal(14, 2)
+  currentBalance Decimal     @default(0) @db.Decimal(14, 2)
+  isArchived     Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  transactions          Transaction[]           @relation("AccountTransactions")
+  transfersOut          Transaction[]           @relation("TransferFromAccount")
+  transfersIn           Transaction[]           @relation("TransferToAccount")
+  savingTransactions    SavingTransaction[]
+  recurringTransactions RecurringTransaction[]
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+// ─────────────────────────────────────────────
+// Categories
+// ─────────────────────────────────────────────
+
+enum CategoryKind {
+  INCOME
+  EXPENSE
+}
+
+model Category {
+  id        String       @id @default(uuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  kind      CategoryKind
+  icon      String?
+  createdAt DateTime     @default(now())
+
+  transactions          Transaction[]
+  recurringTransactions RecurringTransaction[]
+
+  @@unique([userId, name, kind])
+  @@map("categories")
+}
+
+// ─────────────────────────────────────────────
+// Transactions (Income / Expense / Transfer)
+// ─────────────────────────────────────────────
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+model Transaction {
+  id          String          @id @default(uuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        TransactionType
+  amount      Decimal         @db.Decimal(14, 2)
+  description String?
+  date        DateTime
+  notes       String?
+
+  // Used for INCOME / EXPENSE
+  accountId  String?
+  account    Account?  @relation("AccountTransactions", fields: [accountId], references: [id])
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  // Used for TRANSFER
+  fromAccountId String?
+  fromAccount   Account? @relation("TransferFromAccount", fields: [fromAccountId], references: [id])
+  toAccountId   String?
+  toAccount     Account? @relation("TransferToAccount", fields: [toAccountId], references: [id])
+
+  // Set when generated from a recurring rule
+  recurringId String?
+  recurring   RecurringTransaction? @relation(fields: [recurringId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
+  @@index([accountId])
+  @@index([categoryId])
+  @@map("transactions")
+}
+
+// ─────────────────────────────────────────────
+// Recurring transactions (Salary, Rent, Bills...)
+// ─────────────────────────────────────────────
+
+enum RecurrenceFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+model RecurringTransaction {
+  id          String               @id @default(uuid())
+  userId      String
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        TransactionType
+  amount      Decimal              @db.Decimal(14, 2)
+  description String?
+  accountId   String
+  account     Account              @relation(fields: [accountId], references: [id])
+  categoryId  String?
+  category    Category?            @relation(fields: [categoryId], references: [id])
+  frequency   RecurrenceFrequency  @default(MONTHLY)
+  dayOfMonth  Int?
+  nextRunDate DateTime
+  isActive    Boolean              @default(true)
+  // Set when the "due in 2 days" reminder email has been sent for the
+  // CURRENT nextRunDate. Reset to null in lib/recurring.ts whenever
+  // nextRunDate advances, so the guard re-arms for the next cycle instead
+  // of firing once ever.
+  reminderSentAt DateTime?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  transactions Transaction[]
+
+  @@index([userId])
+  @@map("recurring_transactions")
+}
+
+// ─────────────────────────────────────────────
+// Savings goals
+// ─────────────────────────────────────────────
+
+enum SavingStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model Saving {
+  id            String       @id @default(uuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  targetAmount  Decimal      @db.Decimal(14, 2)
+  currentAmount Decimal      @default(0) @db.Decimal(14, 2)
+  targetDate    DateTime?
+  status        SavingStatus @default(ACTIVE)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  savingTransactions SavingTransaction[]
+
+  @@index([userId])
+  @@map("savings")
+}
+
+model SavingTransaction {
+  id          String   @id @default(uuid())
+  savingId    String
+  saving      Saving   @relation(fields: [savingId], references: [id], onDelete: Cascade)
+  accountId   String
+  account     Account  @relation(fields: [accountId], references: [id])
+  amount      Decimal  @db.Decimal(14, 2)
+  date        DateTime
+  description String?
+  createdAt   DateTime @default(now())
+
+  @@index([savingId])
+  @@map("saving_transactions")
+}
