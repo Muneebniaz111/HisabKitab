@@ -86,7 +86,7 @@ export default async function DashboardPage() {
         action={
           <Link
             href="/transactions"
-            className="flex items-center gap-2 bg-ink text-paper text-sm px-4 py-2.5 rounded-sm hover:bg-accent transition-colors"
+            className="flex items-center gap-2 bg-accent text-paper text-sm px-4 py-2.5 rounded-sm hover:bg-[#463b95] transition-colors"
           >
             <Plus className="size-4" strokeWidth={2} />
             Add Transaction

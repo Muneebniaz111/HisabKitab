@@ -5,18 +5,18 @@ import { cn, formatCurrency } from "@/lib/utils";
 
 export type CategorySlice = { category: string; amount: number; percent: number };
 
-// A muted, ink-and-paper-consistent palette — no bright saturated defaults.
+// Keep report colors coordinated with the indigo-led interface.
 const PALETTE = [
-  "#8c2f2f",
-  "#1f3b57",
-  "#2f5d42",
-  "#a3703c",
-  "#6b5b95",
-  "#3c6e71",
-  "#b0413e",
-  "#4a6fa5",
-  "#7c9a6d",
-  "#9b6a6c",
+  "#5548ad",
+  "#7668c4",
+  "#3f6f9f",
+  "#a34f70",
+  "#8b78bd",
+  "#4e8c9b",
+  "#b77a91",
+  "#6688ba",
+  "#7b9cbd",
+  "#9a86ad",
 ];
 
 export function CategoryBreakdownChart({

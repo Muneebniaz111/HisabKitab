@@ -89,7 +89,7 @@ export function SavingAllocateDialog({
                 onClick={() => setDirection("ALLOCATE")}
                 className={cn(
                   "flex items-center justify-center gap-1.5 rounded-sm py-1.5 text-sm transition-colors",
-                  direction === "ALLOCATE" ? "bg-ink text-paper" : "text-ink-muted hover:text-ink"
+                  direction === "ALLOCATE" ? "bg-accent text-paper" : "text-ink-muted hover:text-ink"
                 )}
               >
                 <ArrowDownToLine className="size-3.5" strokeWidth={2} />
@@ -100,7 +100,7 @@ export function SavingAllocateDialog({
                 onClick={() => setDirection("WITHDRAW")}
                 className={cn(
                   "flex items-center justify-center gap-1.5 rounded-sm py-1.5 text-sm transition-colors",
-                  direction === "WITHDRAW" ? "bg-ink text-paper" : "text-ink-muted hover:text-ink"
+                  direction === "WITHDRAW" ? "bg-accent text-paper" : "text-ink-muted hover:text-ink"
                 )}
               >
                 <ArrowUpFromLine className="size-3.5" strokeWidth={2} />

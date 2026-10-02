@@ -29,7 +29,7 @@ export function ReportNav({ view }: { view: string }) {
             href={`${pathname}?${params.toString()}`}
             className={cn(
               "px-3 py-1.5 text-sm rounded-sm transition-colors whitespace-nowrap",
-              view === tab.value ? "bg-ink text-paper" : "text-ink-muted hover:text-ink"
+              view === tab.value ? "bg-accent text-paper" : "text-ink-muted hover:text-ink"
             )}
           >
             {tab.label}

@@ -1,23 +1,18 @@
 @import "tailwindcss";
 
-/*
-  Hisab-Kitab design tokens — a handwritten ledger book, not a fintech
-  dashboard. Paper, ink, and two ledger colors (credit green / debit red)
-  carried through every screen. Amounts always render in tabular mono,
-  the way figures sit in ruled columns on real account-book paper.
-*/
+/* Shared visual tokens for the ledger UI. */
 :root {
-  --paper: #ece5d3;
-  --surface: #f6f2e7;
-  --ink: #26261e;
-  --ink-muted: #6b6656;
-  --rule: #c9bd9c;
-  --credit: #2f5d42;
-  --credit-surface: #e3ead9;
-  --debit: #8c2f2f;
-  --debit-surface: #f2dfd9;
-  --accent: #1f3b57;
-  --accent-surface: #dfe6ec;
+  --paper: #ffffff;
+  --surface: #ffffff;
+  --ink: #211d38;
+  --ink-muted: #746f89;
+  --rule: #e2def0;
+  --credit: #3f6f9f;
+  --credit-surface: #eaf1fb;
+  --debit: #a34f70;
+  --debit-surface: #f9eaf0;
+  --accent: #5548ad;
+  --accent-surface: #eeecff;
 }
 
 @theme inline {
@@ -41,6 +36,11 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-plex-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Give framed surfaces enough separation to read clearly on white. */
+.border-rule.rounded-sm {
+  box-shadow: 0 12px 30px -20px rgba(55, 45, 120, 0.5);
 }
 
 /* Every rupee figure in the app should use this class: tabular numerals

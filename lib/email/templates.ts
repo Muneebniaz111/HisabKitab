@@ -1,12 +1,12 @@
 const COLORS = {
-  paper: "#ece5d3",
-  surface: "#f6f2e7",
-  ink: "#26261e",
-  inkMuted: "#6b6656",
-  rule: "#c9bd9c",
-  credit: "#2f5d42",
-  debit: "#8c2f2f",
-  accent: "#1f3b57",
+  paper: "#ffffff",
+  surface: "#ffffff",
+  ink: "#211d38",
+  inkMuted: "#746f89",
+  rule: "#e2def0",
+  credit: "#3f6f9f",
+  debit: "#a34f70",
+  accent: "#5548ad",
 };
 
 function money(amount: number): string {

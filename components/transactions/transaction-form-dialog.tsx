@@ -160,7 +160,7 @@ export function TransactionFormDialog(props: Props) {
                   onClick={() => handleTypeChange(t)}
                   className={cn(
                     "rounded-sm py-1.5 text-sm capitalize transition-colors",
-                    type === t ? "bg-ink text-paper" : "text-ink-muted hover:text-ink"
+                    type === t ? "bg-accent text-paper" : "text-ink-muted hover:text-ink"
                   )}
                 >
                   {t.toLowerCase()}
