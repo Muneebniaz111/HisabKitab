@@ -32,10 +32,14 @@ export default async function ReportsPage({
   const userId = await getCurrentUserId();
   const view = params.view ?? "ledger";
 
-  const accounts: AccountRecord[] = await db.account.findMany({
+  const accounts: AccountRecord[] = (await db.account.findMany({
     where: { userId, isArchived: false },
     orderBy: { createdAt: "asc" },
-  });
+  })).map((a) => ({
+    ...a,
+    openingBalance: a.openingBalance.toNumber(),
+    currentBalance: a.currentBalance.toNumber(),
+  }));
   const accountOptions = accounts.map((a) => ({ id: a.id, name: a.name }));
 
   return (
@@ -85,7 +89,7 @@ async function CategoriesView({
 }) {
   const { start, end, label } = monthRange(month);
 
-  const transactions: TransactionWithRelations[] = await db.transaction.findMany({
+  const rawTransactions = await db.transaction.findMany({
     where: {
       userId,
       date: { gte: start, lt: end },
@@ -94,6 +98,10 @@ async function CategoriesView({
     },
     include: TRANSACTION_INCLUDE,
   });
+  const transactions: TransactionWithRelations[] = rawTransactions.map((t) => ({
+    ...t,
+    amount: t.amount.toNumber(),
+  }));
 
   const forBreakdown = transactions.map((t) => ({
     categoryName: t.category?.name ?? null,
@@ -129,8 +137,7 @@ async function TrendsView({ userId }: { userId: string }) {
   );
 
   const data: MonthTrend[] = months.map((m, i) => {
-    const [incomeAgg, expenseAgg]: [{ _sum: { amount: number | null } }, { _sum: { amount: number | null } }] =
-      sums[i];
+    const [incomeAgg, expenseAgg] = sums[i];
     return {
       label: m.start.toLocaleDateString("en-PK", { month: "short" }),
       income: Number(incomeAgg._sum.amount ?? 0),
@@ -156,7 +163,7 @@ async function StatementView({
     return <p className="px-4 sm:px-6 lg:px-10 py-16 text-center text-sm text-ink-muted">Add an account to see a statement.</p>;
   }
 
-  const rawTransactions: TransactionWithRelations[] = await db.transaction.findMany({
+  const rawTransactions = await db.transaction.findMany({
     where: {
       userId,
       OR: [{ accountId: account.id }, { fromAccountId: account.id }, { toAccountId: account.id }],

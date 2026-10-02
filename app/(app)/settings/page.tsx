@@ -23,7 +23,15 @@ export default async function SettingsPage() {
 
   const [accounts, categories, recurringRules]: [AccountRecord[], CategoryRecord[], RecurringWithRelations[]] =
     await Promise.all([
-      db.account.findMany({ where: { userId, isArchived: false }, orderBy: { createdAt: "asc" } }),
+      db.account
+        .findMany({ where: { userId, isArchived: false }, orderBy: { createdAt: "asc" } })
+        .then((rows) =>
+          rows.map((a) => ({
+            ...a,
+            openingBalance: a.openingBalance.toNumber(),
+            currentBalance: a.currentBalance.toNumber(),
+          }))
+        ),
       db.category.findMany({ where: { userId }, orderBy: { name: "asc" } }),
       db.recurringTransaction.findMany({
         where: { userId },
@@ -32,7 +40,15 @@ export default async function SettingsPage() {
           category: { select: { id: true, name: true } },
         },
         orderBy: { createdAt: "asc" },
-      }),
+      }).then((rows) =>
+        rows
+          .filter((r) => r.type !== "TRANSFER")
+          .map((r) => ({
+            ...r,
+            type: r.type as RecurringWithRelations["type"],
+            amount: r.amount.toNumber(),
+          }))
+      ),
     ]);
 
   const accountOptions = accounts.map((a) => ({ id: a.id, name: a.name }));
@@ -42,7 +58,7 @@ export default async function SettingsPage() {
   const recurringRows: RecurringRow[] = recurringRules.map((r) => ({
     id: r.id,
     type: r.type,
-    amount: Number(r.amount),
+    amount: r.amount,
     description: r.description ?? "",
     accountName: r.account.name,
     categoryName: r.category?.name ?? "—",

@@ -47,7 +47,7 @@ export async function fetchUnifiedLedger(userId: string, filters: TransactionFil
 
   let transactionRows: LedgerRow[] = [];
   if (!wantsSavingsOnly) {
-    const transactions: TransactionWithRelations[] = await db.transaction.findMany({
+    const rawTransactions = await db.transaction.findMany({
       where: buildTransactionWhere(userId, filters),
       include: {
         account: { select: { id: true, name: true } },
@@ -58,6 +58,10 @@ export async function fetchUnifiedLedger(userId: string, filters: TransactionFil
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       take: 200,
     });
+    const transactions: TransactionWithRelations[] = rawTransactions.map((t) => ({
+      ...t,
+      amount: t.amount.toNumber(),
+    }));
 
     transactionRows = transactions.map((t) => ({
       id: t.id,
@@ -88,7 +92,7 @@ export async function fetchUnifiedLedger(userId: string, filters: TransactionFil
 
   let savingRows: LedgerRow[] = [];
   if (!wantsSpecificRegularType) {
-    const savingTransactions: SavingTransactionWithRelations[] = await db.savingTransaction.findMany({
+    const rawSavingTransactions = await db.savingTransaction.findMany({
       where: savingWhere,
       include: {
         account: { select: { id: true, name: true } },
@@ -97,6 +101,10 @@ export async function fetchUnifiedLedger(userId: string, filters: TransactionFil
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       take: 200,
     });
+    const savingTransactions: SavingTransactionWithRelations[] = rawSavingTransactions.map((s) => ({
+      ...s,
+      amount: s.amount.toNumber(),
+    }));
 
     savingRows = savingTransactions.map((s) => {
       const amount = Number(s.amount);

@@ -22,7 +22,15 @@ export default async function TransactionsPage({
   await ensureDefaultCategories(userId);
 
   const [accounts, categories]: [AccountRecord[], CategoryRecord[]] = await Promise.all([
-    db.account.findMany({ where: { userId, isArchived: false }, orderBy: { createdAt: "asc" } }),
+    db.account
+      .findMany({ where: { userId, isArchived: false }, orderBy: { createdAt: "asc" } })
+      .then((rows) =>
+        rows.map((a) => ({
+          ...a,
+          openingBalance: a.openingBalance.toNumber(),
+          currentBalance: a.currentBalance.toNumber(),
+        }))
+      ),
     db.category.findMany({ where: { userId }, orderBy: { name: "asc" } }),
   ]);
 

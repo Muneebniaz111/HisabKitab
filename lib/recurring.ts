@@ -41,9 +41,15 @@ const MAX_CATCHUP_OCCURRENCES = 366;
  * nothing is due. Returns the number of transactions created.
  */
 export async function processDueRecurringTransactions(userId: string, now: Date = new Date()): Promise<number> {
-  const dueRules: RecurringTransactionRecord[] = await db.recurringTransaction.findMany({
+  const dueRules: RecurringTransactionRecord[] = (await db.recurringTransaction.findMany({
     where: { userId, isActive: true, nextRunDate: { lte: now } },
-  });
+  }))
+    .filter((rule) => rule.type !== "TRANSFER")
+    .map((rule) => ({
+      ...rule,
+      amount: rule.amount.toNumber(),
+      type: rule.type as RecurringTransactionRecord["type"],
+    }));
 
   let totalCreated = 0;
 

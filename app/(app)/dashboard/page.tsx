@@ -34,17 +34,16 @@ export default async function DashboardPage() {
 
   const { start: monthStart, end: monthEnd, label: monthLabel } = monthRange();
 
-  const accounts: AccountRecord[] = await db.account.findMany({
+  const accounts: AccountRecord[] = (await db.account.findMany({
     where: { userId, isArchived: false },
     orderBy: { createdAt: "asc" },
-  });
+  })).map((a) => ({
+    ...a,
+    openingBalance: a.openingBalance.toNumber(),
+    currentBalance: a.currentBalance.toNumber(),
+  }));
 
-  const [incomeAgg, expenseAgg, savingsAgg, recentTransactions]: [
-    { _sum: { amount: number | null } },
-    { _sum: { amount: number | null } },
-    { _sum: { amount: number | null } },
-    TransactionWithRelations[],
-  ] = await Promise.all([
+  const [incomeAgg, expenseAgg, savingsAgg, rawRecentTransactions] = await Promise.all([
     db.transaction.aggregate({
       where: { userId, type: "INCOME", date: { gte: monthStart, lt: monthEnd } },
       _sum: { amount: true },
@@ -69,8 +68,12 @@ export default async function DashboardPage() {
       take: 5,
     }),
   ]);
+  const recentTransactions: TransactionWithRelations[] = rawRecentTransactions.map((t) => ({
+    ...t,
+    amount: t.amount.toNumber(),
+  }));
 
-  const totalBalance = accounts.reduce((sum, a) => sum + Number(a.currentBalance), 0);
+  const totalBalance = accounts.reduce((sum, a) => sum + a.currentBalance, 0);
   const totalIncome = Number(incomeAgg._sum.amount ?? 0);
   const totalExpenses = Number(expenseAgg._sum.amount ?? 0);
   // Net of allocations minus withdrawals this month — matches the monthly

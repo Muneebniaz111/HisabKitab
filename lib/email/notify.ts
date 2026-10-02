@@ -96,7 +96,7 @@ export async function sendSavingsReminderIfDue(userId: string, now: Date = new D
   // fields as Decimal objects at runtime even though these are typed
   // `number` here — convert explicitly rather than relying on which
   // operators happen to coerce correctly.
-  const rawGoals: { name: string; currentAmount: number; targetAmount: number }[] = await db.saving.findMany({
+  const rawGoals = await db.saving.findMany({
     where: { userId, status: "ACTIVE" },
     select: { name: true, currentAmount: true, targetAmount: true },
   });
@@ -143,6 +143,7 @@ export async function sendUpcomingRecurringReminders(userId: string, now: Date =
   });
 
   for (const rule of dueSoon) {
+    if (rule.type === "TRANSFER") continue;
     const { subject, html } = recurringDueSoonEmail({
       description: rule.description ?? "",
       category: rule.category?.name ?? "",

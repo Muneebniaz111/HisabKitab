@@ -9,7 +9,7 @@ import type { TransactionRecord } from "@/lib/types";
 async function loadOwnedTransaction(id: string, userId: string): Promise<TransactionRecord | null> {
   const transaction = await db.transaction.findUnique({ where: { id } });
   if (!transaction || transaction.userId !== userId) return null;
-  return transaction;
+  return { ...transaction, amount: transaction.amount.toNumber() };
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {

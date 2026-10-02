@@ -11,19 +11,21 @@ export const dynamic = "force-dynamic";
 export default async function AccountsPage() {
   const userId = await getCurrentUserId();
 
-  const accounts: AccountRecord[] = await db.account.findMany({
+  const accounts: AccountRecord[] = (await db.account.findMany({
     where: { userId },
     orderBy: { createdAt: "asc" },
-  });
+  })).map((a) => ({
+    ...a,
+    openingBalance: a.openingBalance.toNumber(),
+    currentBalance: a.currentBalance.toNumber(),
+  }));
 
-  // Prisma's Decimal isn't serializable across the server/client boundary —
-  // convert once here rather than in every consumer.
   const rows: AccountRow[] = accounts.map((a) => ({
     id: a.id,
     name: a.name,
     type: a.type,
-    openingBalance: Number(a.openingBalance),
-    currentBalance: Number(a.currentBalance),
+    openingBalance: a.openingBalance,
+    currentBalance: a.currentBalance,
     isArchived: a.isArchived,
   }));
 
