@@ -1,5 +1,6 @@
 import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, PiggyBank } from "lucide-react";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { Amount } from "@/components/ui/amount";
 import { CsvExportButton } from "@/components/reports/csv-export-button";
 import type { LedgerRow } from "@/lib/ledger-query";
 
@@ -28,18 +29,19 @@ export function MonthlyLedger({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
         <div className="border border-rule rounded-sm bg-surface px-6 py-5 sm:py-6">
           <p className="text-xs uppercase tracking-[0.14em] text-ink-muted mb-2.5">Income</p>
-          <p className="ledger-amount text-xl sm:text-2xl text-credit">+{formatCurrency(totalIncome)}</p>
+          <Amount value={totalIncome} prefix="+" className="ledger-amount text-xl sm:text-2xl text-credit" />
         </div>
         <div className="border border-rule rounded-sm bg-surface px-6 py-5 sm:py-6">
           <p className="text-xs uppercase tracking-[0.14em] text-ink-muted mb-2.5">Expenses</p>
-          <p className="ledger-amount text-xl sm:text-2xl text-debit">-{formatCurrency(totalExpenses)}</p>
+          <Amount value={totalExpenses} prefix="-" className="ledger-amount text-xl sm:text-2xl text-debit" />
         </div>
         <div className="border border-rule rounded-sm bg-surface px-6 py-5 sm:py-6">
           <p className="text-xs uppercase tracking-[0.14em] text-ink-muted mb-2.5">Net</p>
-          <p className={cn("ledger-amount text-xl sm:text-2xl", net >= 0 ? "text-credit" : "text-debit")}>
-            {net >= 0 ? "+" : "-"}
-            {formatCurrency(Math.abs(net))}
-          </p>
+          <Amount
+            value={Math.abs(net)}
+            prefix={net >= 0 ? "+" : "-"}
+            className={cn("ledger-amount text-xl sm:text-2xl", net >= 0 ? "text-credit" : "text-debit")}
+          />
         </div>
       </div>
 
@@ -89,17 +91,16 @@ export function MonthlyLedger({
                       </p>
                     </div>
                   </div>
-                  <span
+                  <Amount
+                    value={Math.abs(r.amount)}
+                    prefix={isPositive ? "+" : isNegative ? "-" : ""}
                     className={cn(
                       "ledger-amount text-sm shrink-0",
                       isPositive && "text-credit",
                       isNegative && "text-debit",
                       r.type === "TRANSFER" && "text-accent"
                     )}
-                  >
-                    {isPositive ? "+" : isNegative ? "-" : ""}
-                    {formatCurrency(Math.abs(r.amount))}
-                  </span>
+                  />
                 </div>
               );
             })}

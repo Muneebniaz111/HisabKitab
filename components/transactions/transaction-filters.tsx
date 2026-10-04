@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { monthRange } from "@/lib/date-range";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 const TYPE_TABS: { label: string; value: string | null }[] = [
@@ -27,7 +28,8 @@ export function TransactionFilters({ accounts }: { accounts: { id: string; name:
 
   const activeType = searchParams.get("type");
   const accountId = searchParams.get("accountId") ?? "ALL";
-  const month = searchParams.get("month") ?? "";
+  const monthParam = searchParams.get("month");
+  const month = monthParam ?? monthRange().value;
 
   return (
     <div className="flex flex-wrap items-center gap-4 px-4 sm:px-6 lg:px-10 py-4 border-b border-rule">
@@ -64,10 +66,11 @@ export function TransactionFilters({ accounts }: { accounts: { id: string; name:
         type="month"
         value={month}
         onChange={(e) => updateParam("month", e.target.value || null)}
-        className="h-10 rounded-sm border border-rule bg-paper px-3 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-accent"
+        aria-label="Filter by month"
+        className="h-10 min-w-0 max-w-full rounded-sm border border-rule bg-paper px-3 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-accent"
       />
 
-      {(activeType || accountId !== "ALL" || month) && (
+      {(activeType || accountId !== "ALL" || monthParam) && (
         <button
           onClick={() => router.push(pathname)}
           className="text-xs text-ink-muted hover:text-ink underline underline-offset-2"

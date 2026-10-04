@@ -3,7 +3,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Archive, ArchiveRestore, Trash2, Landmark, Smartphone, Wallet, CircleDollarSign } from "lucide-react";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";
 import { AccountFormDialog } from "@/components/accounts/account-form-dialog";
 import { ACCOUNT_TYPE_LABELS } from "@/lib/validations/account";
@@ -33,7 +34,7 @@ export function AccountList({ accounts }: { accounts: AccountRow[] }) {
     <div className="px-4 sm:px-6 lg:px-10 py-6 sm:py-8 space-y-6 sm:space-y-8">
       <div className="border border-rule bg-surface rounded-sm px-6 sm:px-8 py-6 sm:py-7">
         <p className="text-xs uppercase tracking-[0.14em] text-ink-muted mb-2">Total Balance</p>
-        <p className="ledger-amount font-display text-3xl sm:text-4xl">{formatCurrency(totalBalance)}</p>
+        <Amount value={totalBalance} className="ledger-amount font-display text-3xl sm:text-4xl" />
       </div>
 
       <div className="border border-rule rounded-sm">
@@ -111,14 +112,13 @@ function AccountRowItem({ account }: { account: AccountRow }) {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-        <span
+        <Amount
+          value={account.currentBalance}
           className={cn(
             "ledger-amount text-sm",
             account.currentBalance < 0 ? "text-debit" : "text-ink"
           )}
-        >
-          {formatCurrency(account.currentBalance)}
-        </span>
+        />
 
         <div className="flex items-center gap-0.5 sm:gap-1">
           <AccountFormDialog mode="edit" account={account} />

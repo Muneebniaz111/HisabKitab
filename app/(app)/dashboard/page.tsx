@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Plus } from "lucide-react";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { Amount } from "@/components/ui/amount";
 import { db } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/session";
 import { monthRange } from "@/lib/date-range";
@@ -100,7 +101,7 @@ export default async function DashboardPage() {
       <div className="px-4 sm:px-6 lg:px-10 py-6 sm:py-8 space-y-6 sm:space-y-8">
         <div className="border border-rule bg-surface rounded-sm px-6 sm:px-8 py-6 sm:py-7">
           <p className="text-xs uppercase tracking-[0.14em] text-ink-muted mb-2">Total Balance</p>
-          <p className="ledger-amount font-display text-3xl sm:text-4xl">{formatCurrency(totalBalance)}</p>
+          <Amount value={totalBalance} className="ledger-amount font-display text-3xl sm:text-4xl" />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -130,9 +131,7 @@ export default async function DashboardPage() {
                       <span className="text-sm block">{a.name}</span>
                       <span className="text-xs text-ink-muted">{ACCOUNT_TYPE_LABELS[a.type]}</span>
                     </div>
-                    <span className="ledger-amount text-sm">
-                      {formatCurrency(Number(a.currentBalance))}
-                    </span>
+                    <Amount value={Number(a.currentBalance)} className="ledger-amount text-sm" />
                   </div>
                 ))}
               </div>
@@ -179,17 +178,16 @@ export default async function DashboardPage() {
                         </p>
                       </div>
                     </div>
-                    <span
+                    <Amount
+                      value={Number(t.amount)}
+                      prefix={t.type === "INCOME" ? "+" : t.type === "EXPENSE" ? "-" : ""}
                       className={cn(
                         "ledger-amount text-sm shrink-0",
                         t.type === "INCOME" && "text-credit",
                         t.type === "EXPENSE" && "text-debit",
                         t.type === "TRANSFER" && "text-accent"
                       )}
-                    >
-                      {t.type === "INCOME" ? "+" : t.type === "EXPENSE" ? "-" : ""}
-                      {formatCurrency(Number(t.amount))}
-                    </span>
+                    />
                   </div>
                 ))}
               </div>
@@ -219,10 +217,11 @@ function Stat({
   return (
     <div className="border border-rule rounded-sm bg-surface px-5 py-4 sm:px-6 sm:py-5">
       <p className="text-xs uppercase tracking-[0.14em] text-ink-muted mb-2">{label}</p>
-      <p className={cn("ledger-amount text-xl", TONE_CLASS[tone])}>
-        {value < 0 ? "-" : "+"}
-        {formatCurrency(Math.abs(value))}
-      </p>
+      <Amount
+        value={Math.abs(value)}
+        prefix={value < 0 ? "-" : "+"}
+        className={cn("ledger-amount text-xl", TONE_CLASS[tone])}
+      />
     </div>
   );
 }

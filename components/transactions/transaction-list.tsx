@@ -4,7 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, PiggyBank, Trash2 } from "lucide-react";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";
 import { TransactionFormDialog, type Option, type TransactionFormValues } from "@/components/transactions/transaction-form-dialog";
 import type { LedgerRowType } from "@/lib/ledger-query";
@@ -96,10 +97,11 @@ function Row({
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-          <span className={cn("ledger-amount text-sm", isWithdrawal ? "text-credit" : "text-debit")}>
-            {isWithdrawal ? "+" : "-"}
-            {formatCurrency(Math.abs(t.amount))}
-          </span>
+          <Amount
+            value={Math.abs(t.amount)}
+            prefix={isWithdrawal ? "+" : "-"}
+            className={cn("ledger-amount text-sm", isWithdrawal ? "text-credit" : "text-debit")}
+          />
           <Link href="/savings" className="text-xs text-accent hover:underline hidden sm:inline">
             View goal
           </Link>
@@ -151,17 +153,16 @@ function Row({
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-        <span
+        <Amount
+          value={t.amount}
+          prefix={t.type === "INCOME" ? "+" : t.type === "EXPENSE" ? "-" : ""}
           className={cn(
             "ledger-amount text-sm",
             t.type === "INCOME" && "text-credit",
             t.type === "EXPENSE" && "text-debit",
             t.type === "TRANSFER" && "text-accent"
           )}
-        >
-          {t.type === "INCOME" ? "+" : t.type === "EXPENSE" ? "-" : ""}
-          {formatCurrency(t.amount)}
-        </span>
+        />
 
         <div className="flex items-center gap-0.5 sm:gap-1">
           <TransactionFormDialog

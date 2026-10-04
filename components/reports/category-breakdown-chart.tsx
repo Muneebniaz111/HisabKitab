@@ -1,7 +1,8 @@
 "use client";
 
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { Amount } from "@/components/ui/amount";
 
 export type CategorySlice = { category: string; amount: number; percent: number };
 
@@ -57,12 +58,14 @@ export function CategoryBreakdownChart({
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value) => formatCurrency(Number(value))}
-                    contentStyle={{
-                      background: "var(--surface)",
-                      border: "1px solid var(--rule)",
-                      borderRadius: 2,
-                      fontSize: 13,
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload?.length) return null;
+                      return (
+                        <div className="rounded-sm border border-rule bg-surface px-3 py-2 text-xs shadow-sm">
+                          <p className="mb-1 text-ink-muted">{label}</p>
+                          <Amount value={Number(payload[0].value)} className="ledger-amount text-xs" />
+                        </div>
+                      );
                     }}
                   />
                 </PieChart>
@@ -79,8 +82,9 @@ export function CategoryBreakdownChart({
                     />
                     <span className="truncate">{d.category}</span>
                   </span>
-                  <span className="ledger-amount text-ink-muted shrink-0">
-                    {formatCurrency(d.amount)} · {d.percent}%
+                  <span className="inline-flex min-w-0 items-center gap-1 text-ink-muted shrink-0">
+                    <Amount value={d.amount} className="ledger-amount text-ink-muted" />
+                    <span>· {d.percent}%</span>
                   </span>
                 </div>
               ))}
@@ -102,8 +106,9 @@ export function CategoryBreakdownChart({
               <div key={d.category}>
                 <div className="flex items-center justify-between text-sm mb-1">
                   <span className="truncate">{d.category}</span>
-                  <span className="ledger-amount shrink-0">
-                    {formatCurrency(d.amount)} · {d.percent}%
+                  <span className="inline-flex min-w-0 items-center gap-1 shrink-0">
+                    <Amount value={d.amount} className="ledger-amount" />
+                    <span>· {d.percent}%</span>
                   </span>
                 </div>
                 <div className="h-1.5 rounded-full bg-surface overflow-hidden">

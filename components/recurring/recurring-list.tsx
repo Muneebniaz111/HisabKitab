@@ -3,7 +3,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Repeat, Trash2 } from "lucide-react";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";
 import { RecurringFormDialog, type RecurringFormValues } from "@/components/recurring/recurring-form-dialog";
 
@@ -117,10 +118,11 @@ function Row({
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-        <span className={cn("ledger-amount text-sm", rule.type === "INCOME" ? "text-credit" : "text-debit")}>
-          {rule.type === "INCOME" ? "+" : "-"}
-          {formatCurrency(rule.amount)}
-        </span>
+        <Amount
+          value={rule.amount}
+          prefix={rule.type === "INCOME" ? "+" : "-"}
+          className={cn("ledger-amount text-sm", rule.type === "INCOME" ? "text-credit" : "text-debit")}
+        />
         <div className="flex items-center gap-0.5 sm:gap-1">
           <RecurringFormDialog
             mode="edit"

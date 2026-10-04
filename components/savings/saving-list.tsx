@@ -3,7 +3,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, Target } from "lucide-react";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";
 import { savingProgressPercent } from "@/lib/calculations";
 import { SavingFormDialog } from "@/components/savings/saving-form-dialog";
@@ -96,9 +97,10 @@ function SavingCard({ saving, accounts }: { saving: SavingCardData; accounts: { 
 
       <div>
         <div className="flex items-baseline justify-between mb-1.5">
-          <span className="ledger-amount text-lg">{formatCurrency(saving.currentAmount)}</span>
-          <span className="ledger-amount text-xs text-ink-muted">
-            of {formatCurrency(saving.targetAmount)}
+          <Amount value={saving.currentAmount} className="ledger-amount text-lg" />
+          <span className="inline-flex min-w-0 items-center gap-1 text-xs text-ink-muted">
+            <span>of</span>
+            <Amount value={saving.targetAmount} className="ledger-amount text-xs text-ink-muted" />
           </span>
         </div>
         <div className="h-2 rounded-full bg-surface overflow-hidden">
@@ -113,10 +115,11 @@ function SavingCard({ saving, accounts }: { saving: SavingCardData; accounts: { 
               <span className="truncate">
                 {a.description || (a.amount >= 0 ? "Added from" : "Withdrawn to")} {a.accountName}
               </span>
-              <span className={cn("ledger-amount shrink-0 ml-2", a.amount >= 0 ? "text-credit" : "text-debit")}>
-                {a.amount >= 0 ? "+" : "-"}
-                {formatCurrency(Math.abs(a.amount))}
-              </span>
+              <Amount
+                value={Math.abs(a.amount)}
+                prefix={a.amount >= 0 ? "+" : "-"}
+                className={cn("ledger-amount shrink-0 ml-2", a.amount >= 0 ? "text-credit" : "text-debit")}
+              />
             </div>
           ))}
         </div>

@@ -1,5 +1,6 @@
 import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from "lucide-react";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { Amount } from "@/components/ui/amount";
 import { CsvExportButton } from "@/components/reports/csv-export-button";
 import type { StatementRow } from "@/lib/types";
 
@@ -37,7 +38,7 @@ export function AccountStatement({
 
       <div className="flex items-center justify-between px-4 sm:px-6 py-2.5 bg-surface text-sm">
         <span className="text-ink-muted">Opening Balance</span>
-        <span className="ledger-amount">{formatCurrency(openingBalance)}</span>
+        <Amount value={openingBalance} className="ledger-amount" />
       </div>
 
       {rows.length === 0 ? (
@@ -63,13 +64,15 @@ export function AccountStatement({
                 </div>
               </div>
               <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-                <span className={cn("ledger-amount text-sm", r.delta >= 0 ? "text-credit" : "text-debit")}>
-                  {r.delta >= 0 ? "+" : "-"}
-                  {formatCurrency(Math.abs(r.delta))}
-                </span>
-                <span className="ledger-amount text-sm text-ink-muted w-20 sm:w-28 text-right">
-                  {formatCurrency(r.runningBalance)}
-                </span>
+                <Amount
+                  value={Math.abs(r.delta)}
+                  prefix={r.delta >= 0 ? "+" : "-"}
+                  className={cn("ledger-amount text-sm", r.delta >= 0 ? "text-credit" : "text-debit")}
+                />
+                <Amount
+                  value={r.runningBalance}
+                  className="ledger-amount text-sm text-ink-muted w-20 sm:w-28 text-right"
+                />
               </div>
             </div>
           ))}
