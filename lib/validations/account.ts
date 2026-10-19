@@ -24,5 +24,3 @@ export const updateAccountSchema = z.object({
   type: z.enum(ACCOUNT_TYPES),
 });
 
-export type CreateAccountInput = z.infer<typeof createAccountSchema>;
-export type UpdateAccountInput = z.infer<typeof updateAccountSchema>;

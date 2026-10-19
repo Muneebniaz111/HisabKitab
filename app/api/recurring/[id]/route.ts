@@ -2,11 +2,35 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/session";
 import { updateRecurringSchema } from "@/lib/validations/recurring";
+import { processRecurringOccurrence } from "@/lib/recurring";
 
 async function loadOwnedRule(id: string, userId: string) {
   const rule = await db.recurringTransaction.findUnique({ where: { id } });
   if (!rule || rule.userId !== userId) return null;
   return rule;
+}
+
+// Answers the due-occurrence popup: "process" deducts it now (optionally from
+// another account), "skip" keeps it
+// pending (deductible later from the Recurring section) without re-prompting.
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const userId = await getCurrentUserId();
+  const { action, accountId } = await request.json();
+
+  if (action === "process") {
+    if (!(await processRecurringOccurrence(userId, id, typeof accountId === "string" ? accountId : undefined))) {
+      return NextResponse.json({ error: "Nothing is due for this rule, or the account is invalid" }, { status: 409 });
+    }
+    return NextResponse.json({ processed: true });
+  }
+
+  const rule = await loadOwnedRule(id, userId);
+  if (action !== "skip" || !rule) {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+  await db.recurringTransaction.update({ where: { id }, data: { skippedRunDate: rule.nextRunDate } });
+  return NextResponse.json({ skipped: true });
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {

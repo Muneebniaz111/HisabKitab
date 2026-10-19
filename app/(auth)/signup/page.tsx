@@ -6,7 +6,11 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { PasswordInput } from "@/components/auth/password-input";
+import { AuthHeading, FormMessage, Pending } from "@/components/auth/auth-ui";
+import { signUp } from "../actions";
+import { meetsPasswordPolicy } from "@/lib/validations/password";
+import { PasswordRules } from "@/components/auth/password-rules";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -21,15 +25,10 @@ export default function SignupPage() {
     setError(null);
     setSubmitting(true);
 
-    const supabase = createSupabaseBrowserClient();
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    });
+    const { error, hasSession } = await signUp(email, password, `${window.location.origin}/auth/callback`);
 
     if (error) {
-      setError(error.message);
+      setError(error);
       setSubmitting(false);
       return;
     }
@@ -37,7 +36,7 @@ export default function SignupPage() {
     // Supabase's default project settings require email confirmation
     // before a session exists — session is null in that case even though
     // signUp succeeded.
-    if (!data.session) {
+    if (!hasSession) {
       setCheckEmail(true);
       setSubmitting(false);
       return;
@@ -50,7 +49,7 @@ export default function SignupPage() {
   if (checkEmail) {
     return (
       <div className="text-center">
-        <h1 className="font-display text-2xl mb-3">Check your email</h1>
+        <h1 className="font-display text-3xl mb-3">Check your email</h1>
         <p className="text-sm text-ink-muted">
           We sent a confirmation link to <span className="text-ink">{email}</span>. Click it to
           finish creating your account.
@@ -61,12 +60,13 @@ export default function SignupPage() {
 
   return (
     <>
-      <h1 className="font-display text-2xl mb-6">Create an account</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <AuthHeading title="Create your account" subtitle="Start tracking your money in under a minute." />
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
+            className="h-11 text-base sm:text-sm"
             type="email"
             autoComplete="email"
             value={email}
@@ -76,25 +76,25 @@ export default function SignupPage() {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="password">Password</Label>
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="new-password"
-            minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            aria-describedby="password-rules"
             required
           />
+          <PasswordRules id="password-rules" password={password} />
         </div>
 
-        {error && <p className="text-sm text-debit">{error}</p>}
+        {error && <FormMessage tone="error">{error}</FormMessage>}
 
-        <Button type="submit" className="w-full" disabled={submitting}>
-          {submitting ? "Creating account…" : "Sign Up"}
+        <Button type="submit" className="w-full h-11" disabled={submitting || !meetsPasswordPolicy(password)}>
+          <Pending busy={submitting} idle="Sign Up" busyText="Creating account…" />
         </Button>
       </form>
 
-      <p className="text-sm text-ink-muted mt-6 text-center">
+      <p className="text-sm text-ink-muted mt-8 text-center">
         Already have an account?{" "}
         <Link href="/login" className="text-accent hover:underline">
           Sign in

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/page-header";
 import { db } from "@/lib/db";
-import { getCurrentUserId } from "@/lib/session";
+import { getCurrentUser, getCurrentUserId } from "@/lib/session";
+import { getAccounts } from "@/lib/accounts";
 import { ensureDefaultCategories } from "@/lib/categories";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CategoryManager } from "@/components/settings/category-manager";
 import { RecurringFormDialog } from "@/components/recurring/recurring-form-dialog";
 import { RecurringList, type RecurringRow } from "@/components/recurring/recurring-list";
@@ -16,22 +16,11 @@ export default async function SettingsPage() {
   const userId = await getCurrentUserId();
   await ensureDefaultCategories(userId);
 
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   const [accounts, categories, recurringRules]: [AccountRecord[], CategoryRecord[], RecurringWithRelations[]] =
     await Promise.all([
-      db.account
-        .findMany({ where: { userId, isArchived: false }, orderBy: { createdAt: "asc" } })
-        .then((rows) =>
-          rows.map((a) => ({
-            ...a,
-            openingBalance: a.openingBalance.toNumber(),
-            currentBalance: a.currentBalance.toNumber(),
-          }))
-        ),
+      getAccounts(userId),
       db.category.findMany({ where: { userId }, orderBy: { name: "asc" } }),
       db.recurringTransaction.findMany({
         where: { userId },
@@ -63,8 +52,8 @@ export default async function SettingsPage() {
     accountName: r.account.name,
     categoryName: r.category?.name ?? "—",
     frequency: r.frequency,
-    dayOfMonth: r.dayOfMonth,
     nextRunDate: r.nextRunDate.toISOString(),
+    isDue: r.isActive && r.nextRunDate <= new Date(),
     isActive: r.isActive,
     accountId: r.accountId,
     categoryId: r.categoryId ?? "",
@@ -91,7 +80,7 @@ export default async function SettingsPage() {
           <p className="text-xs uppercase tracking-[0.14em] text-ink-muted mb-3">Accounts</p>
           <Link
             href="/accounts"
-            className="flex items-center justify-between gap-3 border border-rule rounded-sm px-4 sm:px-6 py-4 hover:bg-surface transition-colors"
+            className="flex items-center justify-between gap-3 border border-rule rounded-sm px-4 sm:px-6 py-4 hover:bg-accent-surface transition-colors"
           >
             <span className="flex items-center gap-3 text-sm min-w-0">
               <Wallet className="size-[18px] text-ink-muted shrink-0" strokeWidth={1.75} />

@@ -14,3 +14,11 @@ export function formatCurrency(amount: number | string, currency = "Rs.") {
   const sign = value < 0 ? "-" : "";
   return `${sign}${currency} ${formatted}`;
 }
+
+/** First readable message from an API error body — a plain string or zod's flatten() shape. */
+export function apiErrorMessage(body: { error?: unknown } | null, fallback: string): string {
+  const error = body?.error;
+  if (typeof error === "string") return error;
+  const flat = error as { formErrors?: string[]; fieldErrors?: Record<string, string[]> } | undefined;
+  return flat?.formErrors?.[0] ?? Object.values(flat?.fieldErrors ?? {}).flat()[0] ?? fallback;
+}

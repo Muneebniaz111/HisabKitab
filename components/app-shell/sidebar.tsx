@@ -8,6 +8,7 @@ import {
   ArrowLeftRight,
   Wallet,
   PiggyBank,
+  Sparkles,
   FileBarChart,
   Settings,
   BookOpenText,
@@ -22,6 +23,7 @@ const NAV = [
   { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
   { href: "/accounts", label: "Accounts", icon: Wallet },
   { href: "/savings", label: "Savings", icon: PiggyBank },
+  { href: "/smartspend", label: "SmartSpend", icon: Sparkles },
   { href: "/reports", label: "Reports", icon: FileBarChart },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -91,7 +93,7 @@ export function Sidebar({ userEmail }: { userEmail: string | null | undefined })
         <button
           onClick={() => setOpen(true)}
           aria-label="Open menu"
-          className="p-2 -mr-2 text-ink"
+          className="p-2 -mr-2 rounded-sm text-ink transition-colors hover:bg-accent-surface"
         >
           <Menu className="size-5" strokeWidth={1.75} />
         </button>
@@ -107,7 +109,7 @@ export function Sidebar({ userEmail }: { userEmail: string | null | undefined })
               <button
                 onClick={() => setOpen(false)}
                 aria-label="Close menu"
-                className="p-1 text-ink-muted hover:text-ink"
+                className="p-1 rounded-sm text-ink-muted transition-colors hover:text-ink hover:bg-accent-surface"
               >
                 <X className="size-5" strokeWidth={1.75} />
               </button>

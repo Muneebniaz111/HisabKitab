@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { IDLE_COOKIE, activityCookie, isActive } from "@/lib/idle-session";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/auth/callback"];
+const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth/callback"];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -31,15 +32,24 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isPublicPath = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  const active = !!user && isActive(request.cookies.get(IDLE_COOKIE)?.value, user.id);
 
-  if (!user && !isPublicPath) {
+  // Idle for 120s or browser was closed: revoke the session server-side too.
+  if (user && !active) await supabase.auth.signOut({ scope: "local" });
+  if (active) response.cookies.set(activityCookie(user.id));
+
+  if (!active && !isPublicPath && pathname.startsWith("/api/")) {
+    return withRefreshedCookies(NextResponse.json({ error: "Session expired" }, { status: 401 }), response);
+  }
+
+  if (!active && !isPublicPath) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);
     return withRefreshedCookies(NextResponse.redirect(url), response);
   }
 
-  if (user && (pathname === "/login" || pathname === "/signup")) {
+  if (active && (pathname === "/login" || pathname === "/signup")) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     url.search = "";
@@ -55,7 +65,7 @@ export async function proxy(request: NextRequest) {
 // them across means a token refresh never gets lost just because the
 // same request also happened to redirect.
 function withRefreshedCookies(redirect: NextResponse, source: NextResponse): NextResponse {
-  source.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie.name, cookie.value));
+  source.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
   return redirect;
 }
 

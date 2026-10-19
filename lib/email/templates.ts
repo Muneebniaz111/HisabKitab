@@ -153,7 +153,7 @@ export function recurringDueSoonEmail(p: {
     html: layout(
       "Recurring Transaction Due Soon",
       `<p style="margin:0 0 12px; font-size:14px; color:${COLORS.ink}; font-family:Arial,sans-serif;">
-         <strong>${p.description || p.category}</strong> is scheduled to post in 2 days.
+         <strong>${p.description || p.category}</strong> is due in 2 days. You'll be asked to confirm it in Hisab-Kitab before it's posted.
        </p>
        ${table([
          row("Amount", `${p.type === "INCOME" ? "+" : "-"}${money(p.amount)}`, p.type === "INCOME" ? COLORS.credit : COLORS.debit),

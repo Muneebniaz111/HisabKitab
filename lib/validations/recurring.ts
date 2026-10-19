@@ -2,6 +2,13 @@ import { z } from "zod";
 
 export const RECURRENCE_FREQUENCIES = ["DAILY", "WEEKLY", "MONTHLY", "YEARLY"] as const;
 
+export const FREQUENCY_LABELS: Record<(typeof RECURRENCE_FREQUENCIES)[number], string> = {
+  DAILY: "Every day",
+  WEEKLY: "Every week",
+  MONTHLY: "Every month",
+  YEARLY: "Every year",
+};
+
 export const createRecurringSchema = z.object({
   type: z.enum(["INCOME", "EXPENSE"]),
   accountId: z.string().min(1, "Account is required"),
@@ -13,7 +20,6 @@ export const createRecurringSchema = z.object({
   // First occurrence — becomes the rule's initial nextRunDate.
   startDate: z.coerce.date({ error: "Enter a valid date" }),
 });
-export type CreateRecurringInput = z.infer<typeof createRecurringSchema>;
 
 export const updateRecurringSchema = z.object({
   type: z.enum(["INCOME", "EXPENSE"]),
@@ -25,4 +31,3 @@ export const updateRecurringSchema = z.object({
   dayOfMonth: z.coerce.number().int().min(1).max(31).optional(),
   isActive: z.boolean(),
 });
-export type UpdateRecurringInput = z.infer<typeof updateRecurringSchema>;

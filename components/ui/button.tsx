@@ -9,8 +9,8 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-accent text-paper hover:bg-[#463b95]",
-        outline: "border border-rule text-ink hover:bg-surface",
-        ghost: "text-ink-muted hover:text-ink hover:bg-surface",
+        outline: "border border-rule text-ink hover:border-accent hover:bg-accent-surface",
+        ghost: "text-ink-muted hover:text-ink hover:bg-accent-surface",
         destructive: "bg-debit text-paper hover:opacity-90",
       },
       size: {

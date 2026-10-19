@@ -4,23 +4,33 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Segmented } from "@/components/ui/segmented";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { RECURRENCE_FREQUENCIES } from "@/lib/validations/recurring";
-import { cn } from "@/lib/utils";
+import { RECURRENCE_FREQUENCIES, FREQUENCY_LABELS } from "@/lib/validations/recurring";
+import { apiErrorMessage } from "@/lib/utils";
 
 type Option = { id: string; name: string };
 type Frequency = (typeof RECURRENCE_FREQUENCIES)[number];
 type TxType = "INCOME" | "EXPENSE";
 
-const FREQUENCY_LABELS: Record<Frequency, string> = {
-  DAILY: "Daily",
-  WEEKLY: "Weekly",
-  MONTHLY: "Monthly",
-  YEARLY: "Yearly",
-};
+const ordinal = (n: number) => n + (["th", "st", "nd", "rd"][((n % 100) - 20) % 10] || ["th", "st", "nd", "rd"][n % 100] || "th");
+
+// Plain-language summary under the date, e.g. "Repeats every month on the 19th, starting 19 Oct 2026."
+function scheduleSummary(frequency: Frequency, isoDate: string) {
+  const date = new Date(`${isoDate}T00:00:00Z`);
+  if (isNaN(date.getTime())) return "";
+  const fmt = (o: Intl.DateTimeFormatOptions) => date.toLocaleDateString("en-GB", { timeZone: "UTC", ...o });
+  const when = {
+    DAILY: "every day",
+    WEEKLY: `every week on ${fmt({ weekday: "long" })}`,
+    MONTHLY: `every month on the ${ordinal(date.getUTCDate())}${date.getUTCDate() > 28 ? " (or the month's last day)" : ""}`,
+    YEARLY: `every year on ${fmt({ day: "numeric", month: "short" })}`,
+  }[frequency];
+  return `Repeats ${when}, starting ${fmt({ day: "numeric", month: "short", year: "numeric" })}.`;
+}
 
 export type RecurringFormValues = {
   id: string;
@@ -30,7 +40,6 @@ export type RecurringFormValues = {
   amount: number;
   description: string;
   frequency: Frequency;
-  dayOfMonth: number | null;
   isActive: boolean;
 };
 
@@ -64,7 +73,6 @@ export function RecurringFormDialog(props: Props) {
   const [amount, setAmount] = React.useState(initial ? String(initial.amount) : "");
   const [description, setDescription] = React.useState(initial?.description ?? "");
   const [frequency, setFrequency] = React.useState<Frequency>(initial?.frequency ?? "MONTHLY");
-  const [dayOfMonth, setDayOfMonth] = React.useState(initial?.dayOfMonth ? String(initial.dayOfMonth) : "1");
   const [startDate, setStartDate] = React.useState(TODAY());
   const [isActive, setIsActive] = React.useState(initial?.isActive ?? true);
   const [error, setError] = React.useState<string | null>(null);
@@ -84,9 +92,10 @@ export function RecurringFormDialog(props: Props) {
     setSubmitting(true);
 
     try {
+      // No dayOfMonth: on create the server takes it from startDate; on edit the rule keeps its own.
       const payload = isEdit
-        ? { type, accountId, categoryId, amount, description, frequency, dayOfMonth: Number(dayOfMonth), isActive }
-        : { type, accountId, categoryId, amount, description, frequency, dayOfMonth: Number(dayOfMonth), startDate };
+        ? { type, accountId, categoryId, amount, description, frequency, isActive }
+        : { type, accountId, categoryId, amount, description, frequency, startDate };
 
       const res = await fetch(isEdit ? `/api/recurring/${props.rule.id}` : "/api/recurring", {
         method: isEdit ? "PATCH" : "POST",
@@ -96,7 +105,7 @@ export function RecurringFormDialog(props: Props) {
 
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        setError(body?.error?.formErrors?.[0] ?? body?.error ?? "Please check the fields below.");
+        setError(apiErrorMessage(body, "Please check the fields below."));
         return;
       }
 
@@ -135,21 +144,14 @@ export function RecurringFormDialog(props: Props) {
           <p className="text-sm text-ink-muted">Add an account first.</p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-1 rounded-sm border border-rule p-1">
-              {(["EXPENSE", "INCOME"] as TxType[]).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => handleTypeChange(t)}
-                  className={cn(
-                    "rounded-sm py-1.5 text-sm capitalize transition-colors",
-                    type === t ? "bg-accent text-paper" : "text-ink-muted hover:text-ink"
-                  )}
-                >
-                  {t.toLowerCase()}
-                </button>
-              ))}
-            </div>
+            <Segmented
+              value={type}
+              onChange={handleTypeChange}
+              options={[
+                { value: "EXPENSE", label: "Expense" },
+                { value: "INCOME", label: "Income" },
+              ]}
+            />
 
             <div className="space-y-1.5">
               <Label htmlFor="accountId">Account</Label>
@@ -198,7 +200,7 @@ export function RecurringFormDialog(props: Props) {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="frequency">Frequency</Label>
+                <Label htmlFor="frequency">Repeats</Label>
                 <Select value={frequency} onValueChange={(v) => setFrequency(v as Frequency)}>
                   <SelectTrigger id="frequency">
                     <SelectValue />
@@ -214,24 +216,9 @@ export function RecurringFormDialog(props: Props) {
               </div>
             </div>
 
-            {frequency === "MONTHLY" && (
-              <div className="space-y-1.5">
-                <Label htmlFor="dayOfMonth">Day of Month</Label>
-                <Input
-                  id="dayOfMonth"
-                  type="number"
-                  min="1"
-                  max="31"
-                  value={dayOfMonth}
-                  onChange={(e) => setDayOfMonth(e.target.value)}
-                  required
-                />
-              </div>
-            )}
-
             {!isEdit && (
               <div className="space-y-1.5">
-                <Label htmlFor="startDate">Starts On</Label>
+                <Label htmlFor="startDate">First date</Label>
                 <Input
                   id="startDate"
                   type="date"
@@ -239,6 +226,7 @@ export function RecurringFormDialog(props: Props) {
                   onChange={(e) => setStartDate(e.target.value)}
                   required
                 />
+                <p className="text-xs text-ink-muted">{scheduleSummary(frequency, startDate)}</p>
               </div>
             )}
 

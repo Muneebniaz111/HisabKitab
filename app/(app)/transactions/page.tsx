@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/page-header";
 import { db } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/session";
+import { getAccounts } from "@/lib/accounts";
 import { ensureDefaultCategories } from "@/lib/categories";
 import { fetchUnifiedLedger } from "@/lib/ledger-query";
 import { TransactionFilters } from "@/components/transactions/transaction-filters";
@@ -22,15 +23,7 @@ export default async function TransactionsPage({
   await ensureDefaultCategories(userId);
 
   const [accounts, categories]: [AccountRecord[], CategoryRecord[]] = await Promise.all([
-    db.account
-      .findMany({ where: { userId, isArchived: false }, orderBy: { createdAt: "asc" } })
-      .then((rows) =>
-        rows.map((a) => ({
-          ...a,
-          openingBalance: a.openingBalance.toNumber(),
-          currentBalance: a.currentBalance.toNumber(),
-        }))
-      ),
+    getAccounts(userId),
     db.category.findMany({ where: { userId }, orderBy: { name: "asc" } }),
   ]);
 

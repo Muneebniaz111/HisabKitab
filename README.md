@@ -111,9 +111,7 @@ For production, configure the corresponding production URL with the authenticati
 
 ## Recurring Transactions
 
-Recurring transactions can be processed automatically in supported production environments.
-
-Local development also supports normal application-driven processing.
+When a recurring transaction comes due, the app asks the user to confirm it (Yes posts it to the account and transaction history; No keeps it pending). Pending occurrences can be posted later from Settings → Recurring Transactions.
 
 ## Notifications
 

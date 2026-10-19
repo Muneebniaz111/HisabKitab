@@ -6,7 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { PasswordInput } from "@/components/auth/password-input";
+import { AuthHeading, FormMessage, Pending } from "@/components/auth/auth-ui";
+import { signIn } from "../actions";
 
 export default function LoginPage() {
   return (
@@ -29,11 +31,10 @@ function LoginForm() {
     setError(null);
     setSubmitting(true);
 
-    const supabase = createSupabaseBrowserClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await signIn(email, password);
 
     if (error) {
-      setError(error.message);
+      setError(error);
       setSubmitting(false);
       return;
     }
@@ -44,12 +45,19 @@ function LoginForm() {
 
   return (
     <>
-      <h1 className="font-display text-2xl mb-6">Sign in</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <AuthHeading title="Welcome back" subtitle="Sign in to continue to your ledger." />
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {searchParams.get("reset") === "done" && (
+          <FormMessage tone="success">Password updated. Sign in with your new password.</FormMessage>
+        )}
+        {searchParams.get("error") === "confirmation_failed" && (
+          <FormMessage tone="error">That link is invalid or has expired. Please request a new one.</FormMessage>
+        )}
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
+            className="h-11 text-base sm:text-sm"
             type="email"
             autoComplete="email"
             value={email}
@@ -58,10 +66,14 @@ function LoginForm() {
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="password">Password</Label>
-          <Input
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">Password</Label>
+            <Link href="/forgot-password" className="text-xs text-accent hover:underline">
+              Forgot password?
+            </Link>
+          </div>
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -69,14 +81,14 @@ function LoginForm() {
           />
         </div>
 
-        {error && <p className="text-sm text-debit">{error}</p>}
+        {error && <FormMessage tone="error">{error}</FormMessage>}
 
-        <Button type="submit" className="w-full" disabled={submitting}>
-          {submitting ? "Signing in…" : "Sign In"}
+        <Button type="submit" className="w-full h-11" disabled={submitting}>
+          <Pending busy={submitting} idle="Sign In" busyText="Signing in…" />
         </Button>
       </form>
 
-      <p className="text-sm text-ink-muted mt-6 text-center">
+      <p className="text-sm text-ink-muted mt-8 text-center">
         No account?{" "}
         <Link href="/signup" className="text-accent hover:underline">
           Sign up

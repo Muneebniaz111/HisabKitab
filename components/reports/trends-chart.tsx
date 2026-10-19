@@ -1,7 +1,9 @@
 "use client";
 
+import * as React from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import { Amount } from "@/components/ui/amount";
+import { usePinnedTooltip } from "@/components/reports/use-pinned-tooltip";
 
 export type MonthTrend = { label: string; income: number; expenses: number };
 
@@ -9,6 +11,10 @@ export function TrendsChart({ data }: { data: MonthTrend[] }) {
   const allZero = data.every((d) => d.income === 0 && d.expenses === 0);
   const maxValue = Math.max(...data.flatMap((d) => [d.income, d.expenses]), 0);
   const chartMax = maxValue > 0 ? Math.ceil((maxValue * 1.15) / 100) * 100 : 100;
+  const { ref, pin, tooltipProps, stopClick } = usePinnedTooltip();
+  // Per series, held here rather than in each tooltip Amount so a revealed
+  // amount stays revealed as the tooltip moves between months.
+  const [shown, setShown] = React.useState<Record<string, boolean>>({});
 
   function formatAxisValue(value: number) {
     if (value >= 1_000_000) return `Rs. ${(value / 1_000_000).toFixed(1)}m`;
@@ -17,7 +23,7 @@ export function TrendsChart({ data }: { data: MonthTrend[] }) {
   }
 
   return (
-    <div className="mx-4 sm:mx-6 lg:mx-10 my-6 sm:my-8 border border-rule rounded-sm p-6 sm:p-7">
+    <div ref={ref} className="mx-4 sm:mx-6 lg:mx-10 my-6 sm:my-8 border border-rule rounded-sm p-6 sm:p-7">
       <p className="text-xs uppercase tracking-[0.14em] text-ink-muted mb-4">
         Income vs. Expenses — Last {data.length} Months
       </p>
@@ -29,7 +35,7 @@ export function TrendsChart({ data }: { data: MonthTrend[] }) {
       ) : (
         <div className="h-72 min-w-0 sm:h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 14, right: 8, bottom: 4, left: 4 }} barGap={4} barCategoryGap="18%">
+            <BarChart data={data} margin={{ top: 14, right: 8, bottom: 4, left: 4 }} barGap={4} barCategoryGap="18%" onClick={pin}>
               <CartesianGrid vertical={false} stroke="var(--rule)" />
               <XAxis
                 dataKey="label"
@@ -49,17 +55,26 @@ export function TrendsChart({ data }: { data: MonthTrend[] }) {
                 tickFormatter={formatAxisValue}
               />
               <Tooltip
+                {...tooltipProps}
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length) return null;
                   return (
-                    <div className="rounded-sm border border-rule bg-surface px-3 py-2 text-xs shadow-sm">
+                    <div onClick={stopClick} className="rounded-sm border border-rule bg-surface px-3 py-2 text-xs shadow-sm">
                       <p className="mb-1 text-ink-muted">{label}</p>
-                      {payload.map((entry) => (
-                        <div key={String(entry.dataKey)} className="flex items-center justify-between gap-4">
-                          <span>{entry.name}</span>
-                          <Amount value={Number(entry.value)} className="ledger-amount text-xs" />
-                        </div>
-                      ))}
+                      {payload.map((entry) => {
+                        const key = String(entry.dataKey);
+                        return (
+                          <div key={key} className="flex items-center justify-between gap-4">
+                            <span>{entry.name}</span>
+                            <Amount
+                              value={Number(entry.value)}
+                              className="ledger-amount text-xs"
+                              visible={!!shown[key]}
+                              onVisibleChange={(v) => setShown((cur) => ({ ...cur, [key]: v }))}
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 }}

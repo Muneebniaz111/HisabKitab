@@ -5,12 +5,14 @@ import { cn } from "@/lib/utils";
 import { Amount } from "@/components/ui/amount";
 import { db } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/session";
+import { getAccounts } from "@/lib/accounts";
 import { monthRange } from "@/lib/date-range";
-import { processDueRecurringTransactions } from "@/lib/recurring";
 import { sendSavingsReminderIfDue, sendUpcomingRecurringReminders } from "@/lib/email/notify";
 import { after } from "next/server";
+import { Suspense } from "react";
+import { QuoteBanner } from "@/components/smartspend/quote-banner";
 import { ACCOUNT_TYPE_LABELS } from "@/lib/validations/account";
-import type { AccountRecord, TransactionWithRelations } from "@/lib/types";
+import type { TransactionWithRelations } from "@/lib/types";
 
 // Balances must always reflect the latest write — never statically cached.
 export const dynamic = "force-dynamic";
@@ -18,16 +20,13 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const userId = await getCurrentUserId();
 
-  // Lazy catch-up: materializes any recurring transactions that came due
-  // since the last visit, so the balances rendered below are correct —
-  // this one has to be awaited before we fetch the rest of the page's
-  // data. The reminder emails don't affect anything rendered here, so
-  // they're deferred with after() instead of adding network latency to
-  // every dashboard load; Vercel Cron (see vercel.json) also runs all
-  // three daily in production. Both reminder functions are internally
-  // guarded (reminderSentAt / lastSavingsReminderAt), so running them on
-  // every dashboard load never sends duplicates.
-  await processDueRecurringTransactions(userId);
+  // Reminder emails don't affect anything rendered here, so they're deferred
+  // with after() instead of adding latency to every dashboard load; Vercel
+  // Cron (see vercel.json) also runs both daily in production. Both are
+  // internally guarded (reminderSentAt / lastSavingsReminderAt), so running
+  // them on every dashboard load never sends duplicates. Due recurring
+  // transactions are no longer auto-posted — the user confirms each one
+  // (components/recurring/due-recurring-prompt.tsx).
   after(async () => {
     await sendUpcomingRecurringReminders(userId);
     await sendSavingsReminderIfDue(userId);
@@ -35,14 +34,7 @@ export default async function DashboardPage() {
 
   const { start: monthStart, end: monthEnd, label: monthLabel } = monthRange();
 
-  const accounts: AccountRecord[] = (await db.account.findMany({
-    where: { userId, isArchived: false },
-    orderBy: { createdAt: "asc" },
-  })).map((a) => ({
-    ...a,
-    openingBalance: a.openingBalance.toNumber(),
-    currentBalance: a.currentBalance.toNumber(),
-  }));
+  const accounts = await getAccounts(userId);
 
   const [incomeAgg, expenseAgg, savingsAgg, rawRecentTransactions] = await Promise.all([
     db.transaction.aggregate({
@@ -78,8 +70,8 @@ export default async function DashboardPage() {
   const totalIncome = Number(incomeAgg._sum.amount ?? 0);
   const totalExpenses = Number(expenseAgg._sum.amount ?? 0);
   // Net of allocations minus withdrawals this month — matches the monthly
-  // framing of Income/Expenses above. See lib/types.ts:SavingTransactionRecord
-  // for why the signed amount alone is enough to compute this.
+  // framing of Income/Expenses above. Allocation amounts are signed (see
+  // app/api/savings/[id]/allocations), so their sum alone is the net.
   const netSavings = Number(savingsAgg._sum.amount ?? 0);
 
   return (
@@ -99,6 +91,11 @@ export default async function DashboardPage() {
       />
 
       <div className="px-4 sm:px-6 lg:px-10 py-6 sm:py-8 space-y-6 sm:space-y-8">
+        {/* Streams in on its own so the quote lookup never holds up the dashboard. */}
+        <Suspense fallback={null}>
+          <QuoteBanner />
+        </Suspense>
+
         <div className="border border-rule bg-surface rounded-sm px-6 sm:px-8 py-6 sm:py-7">
           <p className="text-xs uppercase tracking-[0.14em] text-ink-muted mb-2">Total Balance</p>
           <Amount value={totalBalance} className="ledger-amount font-display text-3xl sm:text-4xl" />

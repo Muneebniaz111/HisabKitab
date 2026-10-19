@@ -4,11 +4,12 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Segmented } from "@/components/ui/segmented";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { apiErrorMessage } from "@/lib/utils";
 
 type Direction = "ALLOCATE" | "WITHDRAW";
 
@@ -49,7 +50,7 @@ export function SavingAllocateDialog({
 
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        setError(body?.error?.formErrors?.[0] ?? body?.error ?? "Please check the fields below.");
+        setError(apiErrorMessage(body, "Please check the fields below."));
         return;
       }
 
@@ -83,30 +84,14 @@ export function SavingAllocateDialog({
           <p className="text-sm text-ink-muted">Add an account first to move money to or from this goal.</p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-1 rounded-sm border border-rule p-1">
-              <button
-                type="button"
-                onClick={() => setDirection("ALLOCATE")}
-                className={cn(
-                  "flex items-center justify-center gap-1.5 rounded-sm py-1.5 text-sm transition-colors",
-                  direction === "ALLOCATE" ? "bg-accent text-paper" : "text-ink-muted hover:text-ink"
-                )}
-              >
-                <ArrowDownToLine className="size-3.5" strokeWidth={2} />
-                Add Funds
-              </button>
-              <button
-                type="button"
-                onClick={() => setDirection("WITHDRAW")}
-                className={cn(
-                  "flex items-center justify-center gap-1.5 rounded-sm py-1.5 text-sm transition-colors",
-                  direction === "WITHDRAW" ? "bg-accent text-paper" : "text-ink-muted hover:text-ink"
-                )}
-              >
-                <ArrowUpFromLine className="size-3.5" strokeWidth={2} />
-                Withdraw
-              </button>
-            </div>
+            <Segmented
+              value={direction}
+              onChange={setDirection}
+              options={[
+                { value: "ALLOCATE", label: <><ArrowDownToLine className="size-3.5" strokeWidth={2} />Add Funds</> },
+                { value: "WITHDRAW", label: <><ArrowUpFromLine className="size-3.5" strokeWidth={2} />Withdraw</> },
+              ]}
+            />
 
             <div className="space-y-1.5">
               <Label htmlFor="accountId">{direction === "ALLOCATE" ? "From Account" : "To Account"}</Label>

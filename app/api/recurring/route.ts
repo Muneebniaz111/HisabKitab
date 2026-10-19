@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/session";
 import { createRecurringSchema } from "@/lib/validations/recurring";
+import { firstRunDate } from "@/lib/recurring";
 
 export async function GET() {
   const userId = await getCurrentUserId();
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid category for this type" }, { status: 400 });
   }
 
+  const monthDay = frequency === "MONTHLY" ? (dayOfMonth ?? startDate.getUTCDate()) : null;
   const rule = await db.recurringTransaction.create({
     data: {
       userId,
@@ -47,8 +49,8 @@ export async function POST(request: Request) {
       amount,
       description,
       frequency,
-      dayOfMonth: frequency === "MONTHLY" ? (dayOfMonth ?? startDate.getUTCDate()) : null,
-      nextRunDate: startDate,
+      dayOfMonth: monthDay,
+      nextRunDate: firstRunDate(startDate, frequency, monthDay),
       isActive: true,
     },
   });

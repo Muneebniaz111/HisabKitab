@@ -169,6 +169,10 @@ model RecurringTransaction {
   // nextRunDate advances, so the guard re-arms for the next cycle instead
   // of firing once ever.
   reminderSentAt DateTime?
+  // The nextRunDate the user answered "No" to in the due-occurrence popup.
+  // Stops that popup reappearing; the occurrence stays pending until the
+  // user deducts it from the Recurring section.
+  skippedRunDate DateTime?
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
 
@@ -219,4 +223,20 @@ model SavingTransaction {
 
   @@index([savingId])
   @@map("saving_transactions")
+}
+
+// ─────────────────────────────────────────────
+// Quotes — SmartSpend banner
+// ─────────────────────────────────────────────
+
+// Add, edit or deactivate rows straight in the database (e.g. Supabase table
+// editor) — the app picks one per login session, no code change needed.
+model Quote {
+  id        String   @id @default(dbgenerated("gen_random_uuid()::text"))
+  text      String
+  author    String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("quotes")
 }

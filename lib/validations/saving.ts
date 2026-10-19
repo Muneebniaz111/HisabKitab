@@ -10,7 +10,6 @@ export const createSavingSchema = z.object({
     .positive("Target amount must be greater than 0"),
   targetDate: z.coerce.date().optional().nullable(),
 });
-export type CreateSavingInput = z.infer<typeof createSavingSchema>;
 
 export const updateSavingSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(60, "Keep it under 60 characters"),
@@ -18,7 +17,6 @@ export const updateSavingSchema = z.object({
   targetDate: z.coerce.date().optional().nullable(),
   status: z.enum(SAVING_STATUSES),
 });
-export type UpdateSavingInput = z.infer<typeof updateSavingSchema>;
 
 // A user always enters a positive amount; direction ("money leaves the
 // account into the goal" vs. the reverse) is picked separately and turned
@@ -30,4 +28,3 @@ export const allocationSchema = z.object({
   date: z.coerce.date({ error: "Enter a valid date" }),
   description: z.string().trim().max(120).optional(),
 });
-export type AllocationInput = z.infer<typeof allocationSchema>;

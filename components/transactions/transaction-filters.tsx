@@ -40,7 +40,7 @@ export function TransactionFilters({ accounts }: { accounts: { id: string; name:
             onClick={() => updateParam("type", tab.value)}
             className={cn(
               "px-3 py-1.5 text-sm rounded-sm transition-colors whitespace-nowrap",
-              activeType === tab.value ? "bg-accent text-paper" : "text-ink-muted hover:text-ink"
+              activeType === tab.value ? "bg-accent text-paper" : "text-ink-muted hover:text-ink hover:bg-accent-surface"
             )}
           >
             {tab.label}

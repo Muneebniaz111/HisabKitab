@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/session";
-import { updateTransactionSchema } from "@/lib/validations/transaction";
+import { createTransactionSchema } from "@/lib/validations/transaction";
 import { transactionEffects, negateDeltas } from "@/lib/calculations";
 import { decrementBalanceOrThrow, InsufficientFundsError, type PrismaTx } from "@/lib/balance-guard";
 import type { TransactionRecord } from "@/lib/types";
@@ -19,7 +19,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const existing = await loadOwnedTransaction(id, userId);
   if (!existing) return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
 
-  const parsed = updateTransactionSchema.safeParse(await request.json());
+  // Same shape as create; this route resolves old vs. new balance deltas.
+  const parsed = createTransactionSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }

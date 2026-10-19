@@ -4,34 +4,6 @@
 // -testable even before `prisma generate` has been run.
 export type TransactionType = "INCOME" | "EXPENSE" | "TRANSFER";
 
-export type LedgerTransaction = {
-  type: TransactionType;
-  amount: number;
-};
-
-/**
- * Signed effect of an INCOME/EXPENSE transaction on the account it hits.
- * TRANSFER is intentionally excluded — it never nets to a single account,
- * see applyTransferDeltas() below.
- */
-export function accountDelta(type: Exclude<TransactionType, "TRANSFER">, amount: number): number {
-  if (amount < 0) throw new Error("Transaction amount must be positive; sign is derived from type.");
-  return type === "INCOME" ? amount : -amount;
-}
-
-/**
- * A transfer moves money between two of the user's own accounts.
- * Total money in the system is unchanged — this must always be applied
- * as a single atomic DB transaction (both legs succeed or neither does).
- */
-export function applyTransferDeltas(amount: number) {
-  if (amount <= 0) throw new Error("Transfer amount must be positive.");
-  return {
-    fromAccountDelta: -amount,
-    toAccountDelta: amount,
-  };
-}
-
 export type AccountDelta = { accountId: string; delta: number };
 
 /**
@@ -67,53 +39,10 @@ export function negateDeltas(deltas: AccountDelta[]): AccountDelta[] {
   return deltas.map((d) => ({ ...d, delta: -d.delta }));
 }
 
-export type LedgerSummary = {
-  totalIncome: number;
-  totalExpenses: number;
-  totalTransfers: number;
-  totalSavings: number;
-  netBalance: number;
-};
-
-/**
- * Rolls a list of transactions (already scoped to a date range, e.g. one
- * month) into the ledger summary shown on the dashboard / monthly report.
- * `totalSavings` is passed in separately since saving allocations live in
- * SavingTransaction, not Transaction — see requirements.docx section 6.
- */
-export function summarizeLedger(
-  transactions: LedgerTransaction[],
-  savingsAllocatedThisPeriod: number = 0
-): LedgerSummary {
-  let totalIncome = 0;
-  let totalExpenses = 0;
-  let totalTransfers = 0;
-
-  for (const t of transactions) {
-    const amt = Math.abs(t.amount);
-    if (t.type === "INCOME") totalIncome += amt;
-    else if (t.type === "EXPENSE") totalExpenses += amt;
-    else if (t.type === "TRANSFER") totalTransfers += amt;
-  }
-
-  return {
-    totalIncome,
-    totalExpenses,
-    totalTransfers,
-    totalSavings: savingsAllocatedThisPeriod,
-    netBalance: totalIncome - totalExpenses - savingsAllocatedThisPeriod,
-  };
-}
-
 /** Percentage complete for a savings goal, clamped to [0, 100]. */
 export function savingProgressPercent(currentAmount: number, targetAmount: number): number {
   if (targetAmount <= 0) return 0;
   return Math.min(100, Math.max(0, (currentAmount / targetAmount) * 100));
-}
-
-/** Sums current balances across accounts for the dashboard "Total Balance" tile. */
-export function totalBalance(accounts: { currentBalance: number }[]): number {
-  return accounts.reduce((sum, a) => sum + a.currentBalance, 0);
 }
 
 /** Groups INCOME or EXPENSE transactions by category, sorted by amount descending. */

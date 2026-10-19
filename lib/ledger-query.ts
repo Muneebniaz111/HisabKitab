@@ -7,7 +7,7 @@ export type LedgerRowType = "INCOME" | "EXPENSE" | "TRANSFER" | "SAVING";
 export type LedgerRow = {
   id: string;
   type: LedgerRowType;
-  amount: number; // signed for SAVING (see SavingTransactionRecord); unsigned magnitude otherwise
+  amount: number; // signed for SAVING (+ allocate, − withdraw); unsigned magnitude otherwise
   date: string; // ISO
   description: string;
   notes: string;
@@ -33,7 +33,7 @@ type SavingTransactionWithRelations = {
 
 /**
  * Recurring transactions already show up correctly wherever this is used
- * — lib/recurring.ts materializes them as real Transaction rows, so
+ * — lib/recurring.ts posts confirmed occurrences as real Transaction rows, so
  * db.transaction.findMany() below picks them up with no special casing.
  * Savings allocations don't: they live in the separate SavingTransaction
  * table (see prisma/schema.prisma), so without this merge they'd never

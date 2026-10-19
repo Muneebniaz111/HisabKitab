@@ -35,8 +35,3 @@ export const createTransactionSchema = z.discriminatedUnion("type", [
   transferSchema,
 ]);
 
-export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
-
-// Same shape for edits — the API route resolves old vs. new balance deltas.
-export const updateTransactionSchema = createTransactionSchema;
-export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;

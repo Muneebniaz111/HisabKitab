@@ -4,11 +4,12 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Segmented } from "@/components/ui/segmented";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { apiErrorMessage } from "@/lib/utils";
 
 export type Option = { id: string; name: string };
 export type TxType = "INCOME" | "EXPENSE" | "TRANSFER";
@@ -110,7 +111,7 @@ export function TransactionFormDialog(props: Props) {
 
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        setError(body?.error?.formErrors?.[0] ?? body?.error ?? "Please check the fields below.");
+        setError(apiErrorMessage(body, "Please check the fields below."));
         return;
       }
 
@@ -152,21 +153,15 @@ export function TransactionFormDialog(props: Props) {
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-3 gap-1 rounded-sm border border-rule p-1">
-              {(["EXPENSE", "INCOME", "TRANSFER"] as TxType[]).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => handleTypeChange(t)}
-                  className={cn(
-                    "rounded-sm py-1.5 text-sm capitalize transition-colors",
-                    type === t ? "bg-accent text-paper" : "text-ink-muted hover:text-ink"
-                  )}
-                >
-                  {t.toLowerCase()}
-                </button>
-              ))}
-            </div>
+            <Segmented
+              value={type}
+              onChange={handleTypeChange}
+              options={[
+                { value: "EXPENSE", label: "Expense" },
+                { value: "INCOME", label: "Income" },
+                { value: "TRANSFER", label: "Transfer" },
+              ]}
+            />
 
             {type === "TRANSFER" ? (
               <>

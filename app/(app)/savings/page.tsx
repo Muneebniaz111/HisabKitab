@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/page-header";
 import { db } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/session";
+import { getAccounts } from "@/lib/accounts";
 import { SavingList, type SavingCardData } from "@/components/savings/saving-list";
 import { SavingFormDialog } from "@/components/savings/saving-form-dialog";
 
@@ -11,15 +12,7 @@ export default async function SavingsPage() {
   const userId = await getCurrentUserId();
 
   const [accounts, savings] = await Promise.all([
-    db.account
-      .findMany({ where: { userId, isArchived: false }, orderBy: { createdAt: "asc" } })
-      .then((rows) =>
-        rows.map((a) => ({
-          ...a,
-          openingBalance: a.openingBalance.toNumber(),
-          currentBalance: a.currentBalance.toNumber(),
-        }))
-      ),
+    getAccounts(userId),
     db.saving
       .findMany({
         where: { userId },

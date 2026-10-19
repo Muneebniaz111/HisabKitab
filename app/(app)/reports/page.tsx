@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/page-header";
 import { db } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/session";
+import { getAccounts } from "@/lib/accounts";
 import { monthRange, recentMonths } from "@/lib/date-range";
 import { categoryBreakdown } from "@/lib/calculations";
 import { buildAccountStatement } from "@/lib/reports";
@@ -32,14 +33,7 @@ export default async function ReportsPage({
   const userId = await getCurrentUserId();
   const view = params.view ?? "ledger";
 
-  const accounts: AccountRecord[] = (await db.account.findMany({
-    where: { userId, isArchived: false },
-    orderBy: { createdAt: "asc" },
-  })).map((a) => ({
-    ...a,
-    openingBalance: a.openingBalance.toNumber(),
-    currentBalance: a.currentBalance.toNumber(),
-  }));
+  const accounts = await getAccounts(userId);
   const accountOptions = accounts.map((a) => ({ id: a.id, name: a.name }));
 
   return (
@@ -121,29 +115,21 @@ async function CategoriesView({
 async function TrendsView({ userId }: { userId: string }) {
   const months = recentMonths(6);
 
-  const sums = await Promise.all(
-    months.map((m) =>
-      Promise.all([
-        db.transaction.aggregate({
-          where: { userId, type: "INCOME", date: { gte: m.start, lt: m.end } },
-          _sum: { amount: true },
-        }),
-        db.transaction.aggregate({
-          where: { userId, type: "EXPENSE", date: { gte: m.start, lt: m.end } },
-          _sum: { amount: true },
-        }),
-      ])
-    )
-  );
+  // One grouped query for all months instead of two aggregates per month.
+  const totals = await db.$queryRaw<{ month: Date; type: "INCOME" | "EXPENSE"; total: number }[]>`
+    SELECT date_trunc('month', "date") AS month, "type"::text AS type, SUM("amount")::float8 AS total
+    FROM "transactions"
+    WHERE "userId" = ${userId} AND "type" IN ('INCOME', 'EXPENSE')
+      AND "date" >= ${months[0].start} AND "date" < ${months[months.length - 1].end}
+    GROUP BY 1, 2`;
+  const sumFor = (start: Date, type: string) =>
+    totals.find((t) => t.month.getTime() === start.getTime() && t.type === type)?.total ?? 0;
 
-  const data: MonthTrend[] = months.map((m, i) => {
-    const [incomeAgg, expenseAgg] = sums[i];
-    return {
-      label: m.start.toLocaleDateString("en-PK", { month: "short" }),
-      income: Number(incomeAgg._sum.amount ?? 0),
-      expenses: Number(expenseAgg._sum.amount ?? 0),
-    };
-  });
+  const data: MonthTrend[] = months.map((m) => ({
+    label: m.start.toLocaleDateString("en-PK", { month: "short" }),
+    income: sumFor(m.start, "INCOME"),
+    expenses: sumFor(m.start, "EXPENSE"),
+  }));
 
   return <TrendsChart data={data} />;
 }

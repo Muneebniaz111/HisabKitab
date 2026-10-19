@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { SAVING_STATUSES } from "@/lib/validations/saving";
+import { apiErrorMessage } from "@/lib/utils";
 
 type SavingStatus = (typeof SAVING_STATUSES)[number];
 
@@ -62,7 +63,7 @@ export function SavingFormDialog(props: Props) {
 
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        setError(body?.error?.formErrors?.[0] ?? body?.error ?? "Please check the fields below.");
+        setError(apiErrorMessage(body, "Please check the fields below."));
         return;
       }
 

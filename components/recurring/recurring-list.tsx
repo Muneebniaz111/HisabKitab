@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";
 import { RecurringFormDialog, type RecurringFormValues } from "@/components/recurring/recurring-form-dialog";
+import { FREQUENCY_LABELS } from "@/lib/validations/recurring";
+import { DueRecurringPrompt } from "@/components/recurring/due-recurring-prompt";
 
 export type RecurringRow = {
   id: string;
@@ -16,18 +18,11 @@ export type RecurringRow = {
   accountName: string;
   categoryName: string;
   frequency: "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
-  dayOfMonth: number | null;
   nextRunDate: string;
+  isDue: boolean;
   isActive: boolean;
   accountId: string;
   categoryId: string;
-};
-
-const FREQUENCY_LABELS: Record<RecurringRow["frequency"], string> = {
-  DAILY: "Daily",
-  WEEKLY: "Weekly",
-  MONTHLY: "Monthly",
-  YEARLY: "Yearly",
 };
 
 export function RecurringList({
@@ -75,6 +70,7 @@ function Row({
 }) {
   const router = useRouter();
   const [busy, setBusy] = React.useState(false);
+  const [processing, setProcessing] = React.useState(false);
 
   async function handleDelete() {
     if (!confirm(`Delete the recurring rule "${rule.description || rule.categoryName}"?`)) return;
@@ -95,7 +91,6 @@ function Row({
     amount: rule.amount,
     description: rule.description,
     frequency: rule.frequency,
-    dayOfMonth: rule.dayOfMonth,
     isActive: rule.isActive,
   };
 
@@ -113,6 +108,7 @@ function Row({
             {!rule.isActive && " · Paused"}
             {" · next "}
             {new Date(rule.nextRunDate).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}
+            {rule.isDue && <span className="text-debit"> · Due</span>}
           </p>
         </div>
       </div>
@@ -124,6 +120,29 @@ function Row({
           className={cn("ledger-amount text-sm", rule.type === "INCOME" ? "text-credit" : "text-debit")}
         />
         <div className="flex items-center gap-0.5 sm:gap-1">
+          {rule.isDue && (
+            <Button variant="outline" size="sm" disabled={busy} onClick={() => setProcessing(true)}>
+              {rule.type === "INCOME" ? "Add now" : "Deduct now"}
+            </Button>
+          )}
+          {processing && (
+            <DueRecurringPrompt
+              accounts={accounts}
+              onClose={() => setProcessing(false)}
+              due={{
+                id: rule.id,
+                label: rule.description || rule.categoryName,
+                type: rule.type,
+                amount: rule.amount,
+                accountId: rule.accountId,
+                dueDate: new Date(rule.nextRunDate).toLocaleDateString("en-PK", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                }),
+              }}
+            />
+          )}
           <RecurringFormDialog
             mode="edit"
             rule={editValues}

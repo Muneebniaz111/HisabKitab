@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { transactionEffects } from "@/lib/calculations";
-import type { RecurrenceFrequency, RecurringTransactionRecord } from "@/lib/types";
+import type { RecurrenceFrequency } from "@/lib/types";
 
 /**
  * The next occurrence after `current`. MONTHLY clamps to the last day of
@@ -8,7 +8,7 @@ import type { RecurrenceFrequency, RecurringTransactionRecord } from "@/lib/type
  * for the 31st still runs on Feb 28th) rather than skipping or overflowing
  * into the following month.
  */
-export function computeNextRunDate(current: Date, frequency: RecurrenceFrequency, dayOfMonth?: number | null): Date {
+function computeNextRunDate(current: Date, frequency: RecurrenceFrequency, dayOfMonth?: number | null): Date {
   const year = current.getUTCFullYear();
   const month = current.getUTCMonth();
   const day = current.getUTCDate();
@@ -28,83 +28,81 @@ export function computeNextRunDate(current: Date, frequency: RecurrenceFrequency
   }
 }
 
-// Guards against a misconfigured rule (e.g. nextRunDate stuck in the past
-// due to a bad edit) generating unbounded history in one pass.
-const MAX_CATCHUP_OCCURRENCES = 366;
+/**
+ * First run of a new rule: MONTHLY rules land on dayOfMonth (clamped to the
+ * month's length) on or after `start`, so "day 25, starting today" first runs
+ * on the 25th rather than today.
+ */
+export function firstRunDate(start: Date, frequency: RecurrenceFrequency, dayOfMonth?: number | null): Date {
+  if (frequency !== "MONTHLY" || !dayOfMonth) return start;
+  const year = start.getUTCFullYear();
+  const month = start.getUTCMonth();
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const candidate = new Date(Date.UTC(year, month, Math.min(dayOfMonth, daysInMonth)));
+  return candidate >= start ? candidate : computeNextRunDate(candidate, frequency, dayOfMonth);
+}
+
+/** Active rules whose current occurrence is due and hasn't been answered "No" in the popup. */
+export async function findUnpromptedDueRules(userId: string, now: Date = new Date()) {
+  const rules = await db.recurringTransaction.findMany({
+    where: { userId, isActive: true, type: { not: "TRANSFER" }, nextRunDate: { lte: now } },
+    include: { category: { select: { name: true } } },
+    orderBy: { nextRunDate: "asc" },
+  });
+  return rules.filter((r) => r.skippedRunDate?.getTime() !== r.nextRunDate.getTime());
+}
 
 /**
- * Materializes every due occurrence of every active recurring rule for a
- * user into real Transaction rows, advancing each rule's nextRunDate past
- * `now`. Each rule's catch-up (transactions + balance updates + the rule's
- * own nextRunDate) commits as one db.$transaction — a partially-applied
- * catch-up can't happen. Safe to call repeatedly; it's a no-op when
- * nothing is due. Returns the number of transactions created.
+ * Posts the rule's current (due) occurrence as a real Transaction, applies
+ * its balance effect and advances nextRunDate by one cycle — all in one DB
+ * transaction. `accountId` overrides the rule's account for this occurrence
+ * only. The conditional update on nextRunDate makes a double click or a
+ * second tab a no-op instead of a double deduction. Returns false if nothing
+ * was due or the account isn't the user's.
  */
-export async function processDueRecurringTransactions(userId: string, now: Date = new Date()): Promise<number> {
-  const dueRules: RecurringTransactionRecord[] = (await db.recurringTransaction.findMany({
-    where: { userId, isActive: true, nextRunDate: { lte: now } },
-  }))
-    .filter((rule) => rule.type !== "TRANSFER")
-    .map((rule) => ({
-      ...rule,
-      amount: rule.amount.toNumber(),
-      type: rule.type as RecurringTransactionRecord["type"],
-    }));
+export async function processRecurringOccurrence(userId: string, ruleId: string, accountId?: string) {
+  const rule = await db.recurringTransaction.findFirst({
+    where: { id: ruleId, userId, type: { not: "TRANSFER" }, nextRunDate: { lte: new Date() } },
+  });
+  const account =
+    rule && (await db.account.findFirst({ where: { id: accountId ?? rule.accountId, userId, isArchived: false } }));
+  if (!rule || !account) return false;
 
-  let totalCreated = 0;
+  const [effect] = transactionEffects({
+    type: rule.type,
+    amount: rule.amount.toNumber(),
+    accountId: account.id,
+  });
 
-  for (const rule of dueRules) {
-    const ops = [];
-    const deltaByAccount = new Map<string, number>();
+  return db.$transaction(async (tx) => {
+    const { count } = await tx.recurringTransaction.updateMany({
+      where: { id: rule.id, nextRunDate: rule.nextRunDate },
+      // Resetting reminderSentAt re-arms the "due in 2 days" email guard in
+      // sendUpcomingRecurringReminders() for the next cycle.
+      data: {
+        nextRunDate: computeNextRunDate(rule.nextRunDate, rule.frequency, rule.dayOfMonth),
+        reminderSentAt: null,
+        skippedRunDate: null,
+      },
+    });
+    if (count === 0) return false;
 
-    let occurrenceDate = new Date(rule.nextRunDate);
-    let iterations = 0;
-
-    while (occurrenceDate <= now && iterations < MAX_CATCHUP_OCCURRENCES) {
-      ops.push(
-        db.transaction.create({
-          data: {
-            userId,
-            type: rule.type,
-            amount: rule.amount,
-            date: occurrenceDate,
-            description: rule.description,
-            accountId: rule.accountId,
-            categoryId: rule.categoryId,
-            recurringId: rule.id,
-          },
-        })
-      );
-
-      const [effect] = transactionEffects({
+    await tx.transaction.create({
+      data: {
+        userId,
         type: rule.type,
-        amount: Number(rule.amount),
-        accountId: rule.accountId,
-      });
-      deltaByAccount.set(effect.accountId, (deltaByAccount.get(effect.accountId) ?? 0) + effect.delta);
-
-      occurrenceDate = computeNextRunDate(occurrenceDate, rule.frequency, rule.dayOfMonth);
-      iterations++;
-      totalCreated++;
-    }
-
-    if (iterations === 0) continue;
-
-    for (const [accountId, delta] of deltaByAccount) {
-      ops.push(db.account.update({ where: { id: accountId }, data: { currentBalance: { increment: delta } } }));
-    }
-    ops.push(
-      db.recurringTransaction.update({
-        where: { id: rule.id },
-        // Resetting reminderSentAt here — not a separate step — re-arms
-        // the "due in 2 days" guard in sendUpcomingRecurringReminders()
-        // for whatever cycle nextRunDate now points at.
-        data: { nextRunDate: occurrenceDate, reminderSentAt: null },
-      })
-    );
-
-    await db.$transaction(ops);
-  }
-
-  return totalCreated;
+        amount: rule.amount,
+        date: rule.nextRunDate,
+        description: rule.description,
+        accountId: account.id,
+        categoryId: rule.categoryId,
+        recurringId: rule.id,
+      },
+    });
+    await tx.account.update({
+      where: { id: effect.accountId },
+      data: { currentBalance: { increment: effect.delta } },
+    });
+    return true;
+  });
 }

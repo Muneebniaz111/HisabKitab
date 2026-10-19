@@ -1,9 +1,8 @@
 import { PageHeader } from "@/components/page-header";
-import { db } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/session";
+import { getAccounts } from "@/lib/accounts";
 import { AccountList, type AccountRow } from "@/components/accounts/account-list";
 import { AccountFormDialog } from "@/components/accounts/account-form-dialog";
-import type { AccountRecord } from "@/lib/types";
 
 // Balances must always reflect the latest write — never statically cached.
 export const dynamic = "force-dynamic";
@@ -11,14 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function AccountsPage() {
   const userId = await getCurrentUserId();
 
-  const accounts: AccountRecord[] = (await db.account.findMany({
-    where: { userId },
-    orderBy: { createdAt: "asc" },
-  })).map((a) => ({
-    ...a,
-    openingBalance: a.openingBalance.toNumber(),
-    currentBalance: a.currentBalance.toNumber(),
-  }));
+  const accounts = await getAccounts(userId, { includeArchived: true });
 
   const rows: AccountRow[] = accounts.map((a) => ({
     id: a.id,

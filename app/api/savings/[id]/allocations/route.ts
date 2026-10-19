@@ -29,8 +29,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   // Positive amount = money moves account → goal. Negative = goal → account.
-  // A single signed field keeps both directions the same shape; see
-  // lib/types.ts:SavingTransactionRecord.
+  // A single signed field keeps both directions the same shape, so summing
+  // SavingTransaction.amount always gives the net saved.
   const signedAmount = direction === "ALLOCATE" ? amount : -amount;
 
   try {

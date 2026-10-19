@@ -54,34 +54,6 @@ export type TransactionWithRelations = TransactionRecord & {
   category: { id: string; name: string } | null;
 };
 
-export type SavingStatus = "ACTIVE" | "COMPLETED" | "CANCELLED";
-
-export type SavingRecord = {
-  id: string;
-  userId: string;
-  name: string;
-  targetAmount: number;
-  currentAmount: number;
-  targetDate: Date | null;
-  status: SavingStatus;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type SavingTransactionRecord = {
-  id: string;
-  savingId: string;
-  accountId: string;
-  amount: number;
-  date: Date;
-  description: string | null;
-  createdAt: Date;
-};
-
-export type SavingWithAllocations = SavingRecord & {
-  savingTransactions: (SavingTransactionRecord & { account: { id: string; name: string } })[];
-};
-
 export type StatementRow = {
   id: string;
   date: string; // ISO
