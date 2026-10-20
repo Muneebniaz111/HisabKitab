@@ -10,6 +10,7 @@ import {
   PiggyBank,
   Sparkles,
   FileBarChart,
+  ScrollText,
   Settings,
   BookOpenText,
   Menu,
@@ -25,6 +26,7 @@ const NAV = [
   { href: "/savings", label: "Savings", icon: PiggyBank },
   { href: "/smartspend", label: "SmartSpend", icon: Sparkles },
   { href: "/reports", label: "Reports", icon: FileBarChart },
+  { href: "/audit-log", label: "Audit Log", icon: ScrollText },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

@@ -5,6 +5,8 @@ import { createTransactionSchema } from "@/lib/validations/transaction";
 import { buildTransactionWhere } from "@/lib/transaction-query";
 import { decrementBalanceOrThrow, InsufficientFundsError, type PrismaTx } from "@/lib/balance-guard";
 import { notifyIncomeAdded, notifyExpenseAdded, notifyTransferMade } from "@/lib/email/notify";
+import { formatDate } from "@/lib/dates";
+import { withAudit } from "@/lib/with-audit";
 
 export async function GET(request: Request) {
   const userId = await getCurrentUserId();
@@ -32,7 +34,7 @@ export async function GET(request: Request) {
   return NextResponse.json(transactions);
 }
 
-export async function POST(request: Request) {
+export const POST = withAudit((body) => (body?.type === "TRANSFER" ? "transfer.create" : "transaction.create"), async (request: Request) => {
   const userId = await getCurrentUserId();
   const parsed = createTransactionSchema.safeParse(await request.json());
 
@@ -84,7 +86,7 @@ export async function POST(request: Request) {
         fromAccount: fromAccount.name,
         toAccount: toAccount.name,
         amount: input.amount,
-        date: input.date.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }),
+        date: formatDate(input.date, { day: "numeric", month: "short", year: "numeric" }),
       });
 
       return NextResponse.json(transaction, { status: 201 });
@@ -141,7 +143,7 @@ export async function POST(request: Request) {
       category: category.name,
       account: account.name,
       amount: input.amount,
-      date: input.date.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }),
+      date: formatDate(input.date, { day: "numeric", month: "short", year: "numeric" }),
     };
     if (input.type === "INCOME") notifyIncomeAdded(userId, notifyDetails);
     else notifyExpenseAdded(userId, notifyDetails);
@@ -153,4 +155,4 @@ export async function POST(request: Request) {
     }
     throw err;
   }
-}
+});

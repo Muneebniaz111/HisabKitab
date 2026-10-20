@@ -8,6 +8,7 @@ import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";
 import { AccountFormDialog } from "@/components/accounts/account-form-dialog";
 import { ACCOUNT_TYPE_LABELS } from "@/lib/validations/account";
+import { sumMoney } from "@/lib/money";
 
 export type AccountRow = {
   id: string;
@@ -28,7 +29,7 @@ const TYPE_ICON = {
 export function AccountList({ accounts }: { accounts: AccountRow[] }) {
   const active = accounts.filter((a) => !a.isArchived);
   const archived = accounts.filter((a) => a.isArchived);
-  const totalBalance = active.reduce((sum, a) => sum + a.currentBalance, 0);
+  const totalBalance = sumMoney(active.map((a) => a.currentBalance));
 
   return (
     <div className="px-4 sm:px-6 lg:px-10 py-6 sm:py-8 space-y-6 sm:space-y-8">

@@ -20,22 +20,27 @@ export const getCurrentUser = cache(async () => {
  * The one place every route/page in this app gets the current user's id.
  * Supabase's auth.users.id (a UUID) is reused directly as our Prisma User.id
  * — no separate mapping table, since we always pass the id explicitly here.
- * The User row is only written when it's missing or the email changed, so a
- * normal request costs one indexed read rather than a write.
+ * No database query: the User row is created by syncUser() when the session
+ * is first issued.
  */
 export const getCurrentUserId = cache(async (): Promise<string> => {
   const user = await getCurrentUser();
   if (!user) {
     throw new Error("getCurrentUserId() called outside an authenticated request");
   }
-
-  const email = user.email ?? "";
-  const existing = await db.user.findUnique({ where: { id: user.id }, select: { email: true } });
-  if (!existing) {
-    await db.user.upsert({ where: { id: user.id }, update: {}, create: { id: user.id, email } });
-  } else if (email && existing.email !== email) {
-    await db.user.update({ where: { id: user.id }, data: { email } });
-  }
-
   return user.id;
 });
+
+/**
+ * Creates the User row, or updates its email, for a freshly signed-in
+ * Supabase user. Called wherever a session is issued — signIn, signUp and
+ * /auth/callback — so the row exists before any request needs it.
+ */
+export async function syncUser(user: { id: string; email?: string | null }): Promise<void> {
+  const email = user.email ?? "";
+  await db.user.upsert({
+    where: { id: user.id },
+    update: email ? { email } : {},
+    create: { id: user.id, email },
+  });
+}

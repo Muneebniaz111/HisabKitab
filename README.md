@@ -101,6 +101,14 @@ The project uses Prisma for database access and PostgreSQL for persistent data.
 
 After changing the Prisma schema, create and apply an appropriate migration before running the updated application.
 
+Every table in the `public` schema must have Row Level Security enabled. When a migration creates a new table, add this line to the same migration file:
+
+```sql
+ALTER TABLE "<table_name>" ENABLE ROW LEVEL SECURITY;
+```
+
+The app reaches the database only through Prisma, which connects as a privileged role and bypasses RLS. No policies are needed, and enabling RLS keeps the tables closed to Supabase's public Data API.
+
 ## Authentication
 
 Authentication is handled by the configured authentication provider.
@@ -131,12 +139,14 @@ The application can be deployed to a supported Next.js hosting environment with 
 
 Before deployment:
 
-1. Configure production environment variables.
+1. Configure production environment variables. Every variable the app reads is listed in `.env.example`.
 2. Configure authentication URLs.
-3. Apply database migrations.
+3. Apply database migrations with `npx prisma migrate deploy`. Migrations are not run by the build, so preview deployments never change the production database.
 4. Verify database connectivity.
-5. Verify the application build.
+5. Verify the application build (`npm run build`, which also generates the Prisma client).
 6. Test authentication and core financial workflows.
+
+On Vercel, `vercel.json` schedules the daily cron job. It only runs when `CRON_SECRET` is set in the project's environment variables.
 
 ## Domain Model
 

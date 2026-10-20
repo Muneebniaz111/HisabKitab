@@ -9,6 +9,7 @@ import { Amount } from "@/components/ui/amount";
 import { Button } from "@/components/ui/button";
 import { TransactionFormDialog, type Option, type TransactionFormValues } from "@/components/transactions/transaction-form-dialog";
 import type { LedgerRowType } from "@/lib/ledger-query";
+import { formatDate } from "@/lib/dates";
 
 export type TransactionRow = {
   id: string;
@@ -92,7 +93,7 @@ function Row({
             <p className="text-xs text-ink-muted truncate">
               {isWithdrawal ? "Withdrawal" : "Deposit"} · {t.categoryName} · {t.accountName}
               {" · "}
-              {new Date(t.date).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
+              {formatDate(t.date, { day: "numeric", month: "short", year: "numeric" })}
             </p>
           </div>
         </div>
@@ -147,7 +148,7 @@ function Row({
               ? `${t.fromAccountName} → ${t.toAccountName}`
               : `${t.accountName} · ${t.categoryName}`}
             {" · "}
-            {new Date(t.date).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
+            {formatDate(t.date, { day: "numeric", month: "short", year: "numeric" })}
           </p>
         </div>
       </div>

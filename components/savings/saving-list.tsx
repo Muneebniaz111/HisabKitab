@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { savingProgressPercent } from "@/lib/calculations";
 import { SavingFormDialog } from "@/components/savings/saving-form-dialog";
 import { SavingAllocateDialog } from "@/components/savings/saving-allocate-dialog";
+import { formatDate } from "@/lib/dates";
 
 export type SavingCardData = {
   id: string;
@@ -81,7 +82,7 @@ function SavingCard({ saving, accounts }: { saving: SavingCardData; accounts: { 
             {saving.targetDate && (
               <p className="text-xs text-ink-muted">
                 by{" "}
-                {new Date(saving.targetDate).toLocaleDateString("en-PK", {
+                {formatDate(saving.targetDate, {
                   day: "numeric",
                   month: "short",
                   year: "numeric",

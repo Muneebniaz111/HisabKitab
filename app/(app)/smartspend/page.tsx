@@ -9,6 +9,8 @@ import { categoryBreakdown } from "@/lib/calculations";
 import { buildInsights, type Line } from "@/lib/smartspend";
 import { QuoteBanner } from "@/components/smartspend/quote-banner";
 import { cn } from "@/lib/utils";
+import { sumMoney } from "@/lib/money";
+import { formatDate } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +42,7 @@ export default async function SmartSpendPage() {
   }));
   const thisMonth = rows.filter((r) => r.isCurrent);
   const earlier = rows.filter((r) => !r.isCurrent);
-  const total = (list: typeof rows, type: string) => list.filter((r) => r.type === type).reduce((s, r) => s + r.amount, 0);
+  const total = (list: typeof rows, type: string) => sumMoney(list.filter((r) => r.type === type).map((r) => r.amount));
   // Average only over months that actually have entries, so a new user's empty history doesn't drag it down.
   const pastMonths = new Set(txns.filter((t) => t.date < current.start).map((t) => t.date.toISOString().slice(0, 7))).size || 1;
   const avgByCategory: Record<string, number> = {};
@@ -50,7 +52,7 @@ export default async function SmartSpendPage() {
 
   const input = {
     income: total(thisMonth, "INCOME"),
-    salary: thisMonth.filter((r) => r.type === "INCOME" && /salary/i.test(r.categoryName ?? "")).reduce((s, r) => s + r.amount, 0),
+    salary: sumMoney(thisMonth.filter((r) => r.type === "INCOME" && /salary/i.test(r.categoryName ?? "")).map((r) => r.amount)),
     expenses: total(thisMonth, "EXPENSE"),
     saved: Number(savedAgg._sum.amount ?? 0),
     balance: Number(balanceAgg._sum.currentBalance ?? 0),
@@ -164,7 +166,7 @@ export default async function SmartSpendPage() {
                           "Save ",
                           { amount: g.monthly },
                           g.deadline
-                            ? ` a month to reach it by ${g.deadline.toLocaleDateString("en-PK", { month: "short", year: "numeric" })}.`
+                            ? ` a month to reach it by ${formatDate(g.deadline, { month: "short", year: "numeric" })}.`
                             : ` a month to reach it in about ${g.monthsToGo} month${g.monthsToGo === 1 ? "" : "s"}.`,
                         ]}
                       />

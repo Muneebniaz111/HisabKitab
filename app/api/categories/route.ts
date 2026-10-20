@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/session";
 import { ensureDefaultCategories } from "@/lib/categories";
+import { withAudit } from "@/lib/with-audit";
 
 export async function GET(request: Request) {
   const userId = await getCurrentUserId();
@@ -17,7 +18,7 @@ export async function GET(request: Request) {
   return NextResponse.json(categories);
 }
 
-export async function POST(request: Request) {
+export const POST = withAudit("category.create", async (request: Request) => {
   const userId = await getCurrentUserId();
   const body = await request.json().catch(() => null);
 
@@ -30,4 +31,4 @@ export async function POST(request: Request) {
 
   const category = await db.category.create({ data: { userId, name, kind } });
   return NextResponse.json(category, { status: 201 });
-}
+});

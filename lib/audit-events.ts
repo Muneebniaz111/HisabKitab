@@ -1,0 +1,30 @@
+// No server imports here: the /audit-log filter (a client component) uses this too.
+
+// Every event the audit log records — the /audit-log filter lists these.
+export const AUDIT_EVENTS = [
+  "transaction.create",
+  "transaction.update",
+  "transaction.delete",
+  "transfer.create",
+  "account.create",
+  "account.update",
+  "account.archive",
+  "account.unarchive",
+  "account.delete",
+  "category.create",
+  "category.update",
+  "category.delete",
+  "saving.create",
+  "saving.update",
+  "saving.delete",
+  "saving.deposit",
+  "saving.withdraw",
+  "recurring.create",
+  "recurring.update",
+  "recurring.delete",
+  "recurring.process",
+  "recurring.skip",
+  "auth.sign_in",
+  "auth.sign_out",
+  "auth.password_change",
+] as const;

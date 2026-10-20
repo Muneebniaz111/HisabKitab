@@ -10,10 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { apiErrorMessage } from "@/lib/utils";
+import { MAX_AMOUNT } from "@/lib/validations/money";
+import { todayISO } from "@/lib/dates";
 
 type Direction = "ALLOCATE" | "WITHDRAW";
-
-const TODAY = () => new Date().toISOString().slice(0, 10);
 
 export function SavingAllocateDialog({
   savingId,
@@ -31,7 +31,7 @@ export function SavingAllocateDialog({
   const [direction, setDirection] = React.useState<Direction>(defaultDirection);
   const [accountId, setAccountId] = React.useState(accounts[0]?.id ?? "");
   const [amount, setAmount] = React.useState("");
-  const [date, setDate] = React.useState(TODAY());
+  const [date, setDate] = React.useState(todayISO());
   const [description, setDescription] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -117,6 +117,7 @@ export function SavingAllocateDialog({
                   type="number"
                   min="0.01"
                   step="0.01"
+                  max={MAX_AMOUNT}
                   inputMode="decimal"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}

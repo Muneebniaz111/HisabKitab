@@ -10,6 +10,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from 
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { SAVING_STATUSES } from "@/lib/validations/saving";
 import { apiErrorMessage } from "@/lib/utils";
+import { MAX_AMOUNT } from "@/lib/validations/money";
 
 type SavingStatus = (typeof SAVING_STATUSES)[number];
 
@@ -121,6 +122,7 @@ export function SavingFormDialog(props: Props) {
                 type="number"
                 min="0.01"
                 step="0.01"
+                max={MAX_AMOUNT}
                 inputMode="decimal"
                 value={targetAmount}
                 onChange={(e) => setTargetAmount(e.target.value)}

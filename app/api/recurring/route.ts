@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/session";
 import { createRecurringSchema } from "@/lib/validations/recurring";
 import { firstRunDate } from "@/lib/recurring";
+import { withAudit } from "@/lib/with-audit";
 
 export async function GET() {
   const userId = await getCurrentUserId();
@@ -19,7 +20,7 @@ export async function GET() {
   return NextResponse.json(rules);
 }
 
-export async function POST(request: Request) {
+export const POST = withAudit("recurring.create", async (request: Request) => {
   const userId = await getCurrentUserId();
   const parsed = createRecurringSchema.safeParse(await request.json());
 
@@ -56,4 +57,4 @@ export async function POST(request: Request) {
   });
 
   return NextResponse.json(rule, { status: 201 });
-}
+});

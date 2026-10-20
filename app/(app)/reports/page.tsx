@@ -13,6 +13,7 @@ import { CategoryBreakdownChart } from "@/components/reports/category-breakdown-
 import { TrendsChart, type MonthTrend } from "@/components/reports/trends-chart";
 import { AccountStatement } from "@/components/reports/account-statement";
 import type { AccountRecord, TransactionWithRelations } from "@/lib/types";
+import { formatDate } from "@/lib/dates";
 
 // Every report reads the latest data — never statically cached.
 export const dynamic = "force-dynamic";
@@ -126,7 +127,7 @@ async function TrendsView({ userId }: { userId: string }) {
     totals.find((t) => t.month.getTime() === start.getTime() && t.type === type)?.total ?? 0;
 
   const data: MonthTrend[] = months.map((m) => ({
-    label: m.start.toLocaleDateString("en-PK", { month: "short" }),
+    label: formatDate(m.start, { month: "short" }),
     income: sumFor(m.start, "INCOME"),
     expenses: sumFor(m.start, "EXPENSE"),
   }));

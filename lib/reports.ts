@@ -1,4 +1,5 @@
 import { transactionEffects } from "@/lib/calculations";
+import { sumMoney } from "@/lib/money";
 import type { TransactionWithRelations, StatementRow } from "@/lib/types";
 
 /**
@@ -24,7 +25,7 @@ export function buildAccountStatement(
       toAccountId: t.toAccountId,
     });
     const delta = effects.find((e) => e.accountId === accountId)?.delta ?? 0;
-    running += delta;
+    running = sumMoney([running, delta]);
 
     let rowType: StatementRow["type"];
     let counterpart: string;

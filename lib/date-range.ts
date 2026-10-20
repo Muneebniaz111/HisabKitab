@@ -1,8 +1,14 @@
-/** Resolves a "YYYY-MM" string (or the current month if omitted/invalid) into a UTC date range. */
+import { formatDate, todayISO } from "@/lib/dates";
+
+/**
+ * Resolves a "YYYY-MM" string (or the current month if omitted/invalid) into a
+ * UTC date range. Stored dates are UTC midnight of their calendar day, so the
+ * range is in UTC; only "which month is it now" is decided in Pakistan time.
+ */
 export function monthRange(monthStr?: string | null) {
-  const now = new Date();
-  let year = now.getUTCFullYear();
-  let month = now.getUTCMonth(); // 0-indexed
+  const [todayYear, todayMonth] = todayISO().split("-").map(Number);
+  let year = todayYear;
+  let month = todayMonth - 1; // 0-indexed
 
   if (monthStr && /^\d{4}-\d{2}$/.test(monthStr)) {
     const [y, m] = monthStr.split("-").map(Number);
@@ -12,7 +18,7 @@ export function monthRange(monthStr?: string | null) {
 
   const start = new Date(Date.UTC(year, month, 1));
   const end = new Date(Date.UTC(year, month + 1, 1));
-  const label = start.toLocaleDateString("en-PK", { month: "long", year: "numeric" });
+  const label = formatDate(start, { month: "long", year: "numeric" });
   const value = `${year}-${String(month + 1).padStart(2, "0")}`;
 
   return { start, end, label, value };

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/session";
 import { updateRecurringSchema } from "@/lib/validations/recurring";
 import { processRecurringOccurrence } from "@/lib/recurring";
+import { withAudit } from "@/lib/with-audit";
 
 async function loadOwnedRule(id: string, userId: string) {
   const rule = await db.recurringTransaction.findUnique({ where: { id } });
@@ -13,7 +14,7 @@ async function loadOwnedRule(id: string, userId: string) {
 // Answers the due-occurrence popup: "process" deducts it now (optionally from
 // another account), "skip" keeps it
 // pending (deductible later from the Recurring section) without re-prompting.
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withAudit((body) => (body?.action === "process" ? "recurring.process" : "recurring.skip"), async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const userId = await getCurrentUserId();
   const { action, accountId } = await request.json();
@@ -31,9 +32,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
   await db.recurringTransaction.update({ where: { id }, data: { skippedRunDate: rule.nextRunDate } });
   return NextResponse.json({ skipped: true });
-}
+});
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const PATCH = withAudit("recurring.update", async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const userId = await getCurrentUserId();
 
@@ -73,9 +74,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   });
 
   return NextResponse.json(rule);
-}
+});
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const DELETE = withAudit("recurring.delete", async (_request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const userId = await getCurrentUserId();
 
@@ -89,4 +90,4 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   // the rule stops future generation, it doesn't erase history.
   await db.recurringTransaction.delete({ where: { id } });
   return NextResponse.json({ deleted: true });
-}
+});

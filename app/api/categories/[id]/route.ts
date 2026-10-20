@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/session";
+import { withAudit } from "@/lib/with-audit";
 
 async function loadOwnedCategory(id: string, userId: string) {
   const category = await db.category.findUnique({ where: { id } });
@@ -8,7 +9,7 @@ async function loadOwnedCategory(id: string, userId: string) {
   return category;
 }
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const PATCH = withAudit("category.update", async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const userId = await getCurrentUserId();
 
@@ -24,9 +25,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const category = await db.category.update({ where: { id }, data: { name } });
   return NextResponse.json(category);
-}
+});
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const DELETE = withAudit("category.delete", async (_request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const userId = await getCurrentUserId();
 
@@ -48,4 +49,4 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
   await db.category.delete({ where: { id } });
   return NextResponse.json({ deleted: true });
-}
+});

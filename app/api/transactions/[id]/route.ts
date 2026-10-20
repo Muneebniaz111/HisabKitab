@@ -3,21 +3,29 @@ import { db } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/session";
 import { createTransactionSchema } from "@/lib/validations/transaction";
 import { transactionEffects, negateDeltas } from "@/lib/calculations";
+import { sumMoney } from "@/lib/money";
 import { decrementBalanceOrThrow, InsufficientFundsError, type PrismaTx } from "@/lib/balance-guard";
 import type { TransactionRecord } from "@/lib/types";
+import { withAudit } from "@/lib/with-audit";
 
-async function loadOwnedTransaction(id: string, userId: string): Promise<TransactionRecord | null> {
-  const transaction = await db.transaction.findUnique({ where: { id } });
-  if (!transaction || transaction.userId !== userId) return null;
+class TransactionNotFoundError extends Error {}
+
+// Must run inside db.$transaction. Locks the row before reading it, so a
+// concurrent PATCH/DELETE of the same transaction waits for this one to
+// commit and then sees its result — otherwise both would reverse the same
+// old amount and the account balance would drift.
+async function lockOwnedTransaction(tx: PrismaTx, id: string, userId: string): Promise<TransactionRecord> {
+  await tx.$queryRaw`SELECT id FROM transactions WHERE id = ${id} FOR UPDATE`;
+  const transaction = await tx.transaction.findUnique({ where: { id } });
+  if (!transaction || transaction.userId !== userId) throw new TransactionNotFoundError();
   return { ...transaction, amount: transaction.amount.toNumber() };
 }
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+const notFound = () => NextResponse.json({ error: "Transaction not found" }, { status: 404 });
+
+export const PATCH = withAudit("transaction.update", async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const userId = await getCurrentUserId();
-
-  const existing = await loadOwnedTransaction(id, userId);
-  if (!existing) return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
 
   // Same shape as create; this route resolves old vs. new balance deltas.
   const parsed = createTransactionSchema.safeParse(await request.json());
@@ -58,19 +66,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     newAccountNames.set(account.id, account.name);
   }
 
-  // Reverse the old effect, apply the new one — both computed from the
-  // same lib/calculations.ts helper POST uses, so there's one source of
-  // truth for what a transaction does to account balances.
-  const reverseOld = negateDeltas(
-    transactionEffects({
-      type: existing.type,
-      amount: existing.amount,
-      accountId: existing.accountId,
-      fromAccountId: existing.fromAccountId,
-      toAccountId: existing.toAccountId,
-    })
-  );
-
   const applyNew = transactionEffects({
     type: input.type,
     amount: input.amount,
@@ -78,19 +73,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     fromAccountId: input.type === "TRANSFER" ? input.fromAccountId : undefined,
     toAccountId: input.type === "TRANSFER" ? input.toAccountId : undefined,
   });
-
-  // Net the two delta sets per account rather than applying them as
-  // separate writes — e.g. editing an expense's amount upward on the same
-  // account nets to a single negative delta (the increase), which is
-  // exactly the case the balance guard needs to catch. An account touched
-  // only by reverseOld (its account changed) can only ever net positive —
-  // reversing an old debit always adds money back — so it's never a
-  // candidate for the guard, which is why newAccountNames above always
-  // has a name ready for whichever account does need it.
-  const netByAccount = new Map<string, number>();
-  for (const e of [...reverseOld, ...applyNew]) {
-    netByAccount.set(e.accountId, (netByAccount.get(e.accountId) ?? 0) + e.delta);
-  }
 
   const updateData =
     input.type === "TRANSFER"
@@ -119,6 +101,34 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   try {
     const transaction = await db.$transaction(async (tx: PrismaTx) => {
+      const existing = await lockOwnedTransaction(tx, id, userId);
+
+      // Reverse the old effect, apply the new one — both computed from the
+      // same lib/calculations.ts helper POST uses, so there's one source of
+      // truth for what a transaction does to account balances.
+      const reverseOld = negateDeltas(
+        transactionEffects({
+          type: existing.type,
+          amount: existing.amount,
+          accountId: existing.accountId,
+          fromAccountId: existing.fromAccountId,
+          toAccountId: existing.toAccountId,
+        })
+      );
+
+      // Net the two delta sets per account rather than applying them as
+      // separate writes — e.g. editing an expense's amount upward on the same
+      // account nets to a single negative delta (the increase), which is
+      // exactly the case the balance guard needs to catch. An account touched
+      // only by reverseOld (its account changed) can only ever net positive —
+      // reversing an old debit always adds money back — so it's never a
+      // candidate for the guard, which is why newAccountNames above always
+      // has a name ready for whichever account does need it.
+      const netByAccount = new Map<string, number>();
+      for (const e of [...reverseOld, ...applyNew]) {
+        netByAccount.set(e.accountId, sumMoney([netByAccount.get(e.accountId) ?? 0, e.delta]));
+      }
+
       for (const [accountId, delta] of netByAccount) {
         if (delta < 0) {
           await decrementBalanceOrThrow(tx, accountId, newAccountNames.get(accountId) ?? "account", -delta);
@@ -131,36 +141,41 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     return NextResponse.json(transaction);
   } catch (err) {
+    if (err instanceof TransactionNotFoundError) return notFound();
     if (err instanceof InsufficientFundsError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
     throw err;
   }
-}
+});
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const DELETE = withAudit("transaction.delete", async (_request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const userId = await getCurrentUserId();
 
-  const existing = await loadOwnedTransaction(id, userId);
-  if (!existing) return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
+  try {
+    await db.$transaction(async (tx: PrismaTx) => {
+      const existing = await lockOwnedTransaction(tx, id, userId);
 
-  const reverse = negateDeltas(
-    transactionEffects({
-      type: existing.type,
-      amount: existing.amount,
-      accountId: existing.accountId,
-      fromAccountId: existing.fromAccountId,
-      toAccountId: existing.toAccountId,
-    })
-  );
+      const reverse = negateDeltas(
+        transactionEffects({
+          type: existing.type,
+          amount: existing.amount,
+          accountId: existing.accountId,
+          fromAccountId: existing.fromAccountId,
+          toAccountId: existing.toAccountId,
+        })
+      );
 
-  await db.$transaction([
-    db.transaction.delete({ where: { id } }),
-    ...reverse.map((e) =>
-      db.account.update({ where: { id: e.accountId }, data: { currentBalance: { increment: e.delta } } })
-    ),
-  ]);
+      await tx.transaction.delete({ where: { id } });
+      for (const e of reverse) {
+        await tx.account.update({ where: { id: e.accountId }, data: { currentBalance: { increment: e.delta } } });
+      }
+    });
+  } catch (err) {
+    if (err instanceof TransactionNotFoundError) return notFound();
+    throw err;
+  }
 
   return NextResponse.json({ deleted: true });
-}
+});

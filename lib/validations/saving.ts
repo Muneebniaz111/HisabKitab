@@ -1,19 +1,17 @@
 import { z } from "zod";
+import { money } from "./money";
 
 export const SAVING_STATUSES = ["ACTIVE", "COMPLETED", "CANCELLED"] as const;
 
 export const createSavingSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(60, "Keep it under 60 characters"),
-  targetAmount: z.coerce
-    .number({ error: "Enter a number" })
-    .finite()
-    .positive("Target amount must be greater than 0"),
+  targetAmount: money,
   targetDate: z.coerce.date().optional().nullable(),
 });
 
 export const updateSavingSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(60, "Keep it under 60 characters"),
-  targetAmount: z.coerce.number({ error: "Enter a number" }).finite().positive("Target amount must be greater than 0"),
+  targetAmount: money,
   targetDate: z.coerce.date().optional().nullable(),
   status: z.enum(SAVING_STATUSES),
 });
@@ -24,7 +22,7 @@ export const updateSavingSchema = z.object({
 export const allocationSchema = z.object({
   direction: z.enum(["ALLOCATE", "WITHDRAW"]),
   accountId: z.string().min(1, "Account is required"),
-  amount: z.coerce.number({ error: "Enter a number" }).finite().positive("Amount must be greater than 0"),
+  amount: money,
   date: z.coerce.date({ error: "Enter a valid date" }),
   description: z.string().trim().max(120).optional(),
 });

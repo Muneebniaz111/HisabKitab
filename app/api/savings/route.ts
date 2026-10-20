@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/session";
 import { createSavingSchema } from "@/lib/validations/saving";
+import { withAudit } from "@/lib/with-audit";
 
 export async function GET() {
   const userId = await getCurrentUserId();
@@ -21,7 +22,7 @@ export async function GET() {
   return NextResponse.json(savings);
 }
 
-export async function POST(request: Request) {
+export const POST = withAudit("saving.create", async (request: Request) => {
   const userId = await getCurrentUserId();
   const parsed = createSavingSchema.safeParse(await request.json());
 
@@ -36,4 +37,4 @@ export async function POST(request: Request) {
   });
 
   return NextResponse.json(saving, { status: 201 });
-}
+});

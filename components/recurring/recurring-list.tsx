@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { RecurringFormDialog, type RecurringFormValues } from "@/components/recurring/recurring-form-dialog";
 import { FREQUENCY_LABELS } from "@/lib/validations/recurring";
 import { DueRecurringPrompt } from "@/components/recurring/due-recurring-prompt";
+import { formatDate } from "@/lib/dates";
 
 export type RecurringRow = {
   id: string;
@@ -107,7 +108,7 @@ function Row({
             {rule.accountName} · {rule.categoryName} · {FREQUENCY_LABELS[rule.frequency]}
             {!rule.isActive && " · Paused"}
             {" · next "}
-            {new Date(rule.nextRunDate).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}
+            {formatDate(rule.nextRunDate, { day: "numeric", month: "short" })}
             {rule.isDue && <span className="text-debit"> · Due</span>}
           </p>
         </div>
@@ -135,7 +136,7 @@ function Row({
                 type: rule.type,
                 amount: rule.amount,
                 accountId: rule.accountId,
-                dueDate: new Date(rule.nextRunDate).toLocaleDateString("en-PK", {
+                dueDate: formatDate(rule.nextRunDate, {
                   day: "numeric",
                   month: "short",
                   year: "numeric",

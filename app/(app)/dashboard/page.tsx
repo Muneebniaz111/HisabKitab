@@ -13,6 +13,7 @@ import { Suspense } from "react";
 import { QuoteBanner } from "@/components/smartspend/quote-banner";
 import { ACCOUNT_TYPE_LABELS } from "@/lib/validations/account";
 import type { TransactionWithRelations } from "@/lib/types";
+import { sumMoney } from "@/lib/money";
 
 // Balances must always reflect the latest write — never statically cached.
 export const dynamic = "force-dynamic";
@@ -66,7 +67,7 @@ export default async function DashboardPage() {
     amount: t.amount.toNumber(),
   }));
 
-  const totalBalance = accounts.reduce((sum, a) => sum + a.currentBalance, 0);
+  const totalBalance = sumMoney(accounts.map((a) => a.currentBalance));
   const totalIncome = Number(incomeAgg._sum.amount ?? 0);
   const totalExpenses = Number(expenseAgg._sum.amount ?? 0);
   // Net of allocations minus withdrawals this month — matches the monthly

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS } from "@/lib/validations/account";
+import { MAX_AMOUNT } from "@/lib/validations/money";
 
 type AccountType = (typeof ACCOUNT_TYPES)[number];
 
@@ -125,6 +126,7 @@ export function AccountFormDialog(props: Props) {
                 type="number"
                 min="0"
                 step="0.01"
+                max={MAX_AMOUNT}
                 inputMode="decimal"
                 value={openingBalance}
                 onChange={(e) => setOpeningBalance(e.target.value)}

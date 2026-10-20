@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/session";
 import { updateSavingSchema } from "@/lib/validations/saving";
+import { withAudit } from "@/lib/with-audit";
 
 async function loadOwnedSaving(id: string, userId: string) {
   const saving = await db.saving.findUnique({ where: { id } });
@@ -9,7 +10,7 @@ async function loadOwnedSaving(id: string, userId: string) {
   return saving;
 }
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const PATCH = withAudit("saving.update", async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const userId = await getCurrentUserId();
 
@@ -29,9 +30,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   });
 
   return NextResponse.json(saving);
-}
+});
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const DELETE = withAudit("saving.delete", async (_request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const userId = await getCurrentUserId();
 
@@ -49,6 +50,14 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     );
   }
 
-  await db.saving.delete({ where: { id } });
+  // Re-check the balance in the delete itself: an allocation landing
+  // between the check above and this delete would otherwise be lost.
+  const { count } = await db.saving.deleteMany({ where: { id, userId, currentAmount: 0 } });
+  if (count === 0) {
+    return NextResponse.json(
+      { error: "Withdraw the remaining funds before deleting this goal." },
+      { status: 400 }
+    );
+  }
   return NextResponse.json({ deleted: true });
-}
+});

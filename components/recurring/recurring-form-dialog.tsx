@@ -11,6 +11,8 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from 
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { RECURRENCE_FREQUENCIES, FREQUENCY_LABELS } from "@/lib/validations/recurring";
 import { apiErrorMessage } from "@/lib/utils";
+import { MAX_AMOUNT } from "@/lib/validations/money";
+import { todayISO } from "@/lib/dates";
 
 type Option = { id: string; name: string };
 type Frequency = (typeof RECURRENCE_FREQUENCIES)[number];
@@ -49,8 +51,6 @@ type Props = {
   expenseCategories: Option[];
 } & ({ mode: "create" } | { mode: "edit"; rule: RecurringFormValues });
 
-const TODAY = () => new Date().toISOString().slice(0, 10);
-
 export function RecurringFormDialog(props: Props) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -73,7 +73,7 @@ export function RecurringFormDialog(props: Props) {
   const [amount, setAmount] = React.useState(initial ? String(initial.amount) : "");
   const [description, setDescription] = React.useState(initial?.description ?? "");
   const [frequency, setFrequency] = React.useState<Frequency>(initial?.frequency ?? "MONTHLY");
-  const [startDate, setStartDate] = React.useState(TODAY());
+  const [startDate, setStartDate] = React.useState(todayISO());
   const [isActive, setIsActive] = React.useState(initial?.isActive ?? true);
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -193,6 +193,7 @@ export function RecurringFormDialog(props: Props) {
                   type="number"
                   min="0.01"
                   step="0.01"
+                  max={MAX_AMOUNT}
                   inputMode="decimal"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}

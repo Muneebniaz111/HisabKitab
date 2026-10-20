@@ -1,6 +1,6 @@
 import { z } from "zod";
+import { money as amount } from "./money";
 
-const amount = z.coerce.number({ error: "Enter a number" }).finite().positive("Amount must be greater than 0");
 const date = z.coerce.date({ error: "Enter a valid date" });
 const description = z.string().trim().max(120).optional();
 const notes = z.string().trim().max(500).optional();

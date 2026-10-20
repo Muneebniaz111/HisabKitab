@@ -4,8 +4,10 @@ import { getCurrentUserId } from "@/lib/session";
 import { allocationSchema } from "@/lib/validations/saving";
 import { decrementBalanceOrThrow, decrementSavingOrThrow, InsufficientFundsError, type PrismaTx } from "@/lib/balance-guard";
 import { notifySavingAllocation } from "@/lib/email/notify";
+import { formatDate } from "@/lib/dates";
+import { withAudit } from "@/lib/with-audit";
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withAudit((body) => (body?.direction === "WITHDRAW" ? "saving.withdraw" : "saving.deposit"), async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id: savingId } = await params;
   const userId = await getCurrentUserId();
 
@@ -65,7 +67,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       account: account.name,
       amount,
       newTotal: Number(updatedSaving.currentAmount),
-      date: date.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }),
+      date: formatDate(date, { day: "numeric", month: "short", year: "numeric" }),
     });
 
     return NextResponse.json(updatedSaving, { status: 201 });
@@ -75,4 +77,4 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
     throw err;
   }
-}
+});

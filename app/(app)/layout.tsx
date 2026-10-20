@@ -1,10 +1,12 @@
 import { getCurrentUser } from "@/lib/session";
 import { Sidebar } from "@/components/app-shell/sidebar";
 import { IdleLogout } from "@/components/auth/idle-logout";
+import { IDLE_TIMEOUT_MS } from "@/lib/idle-session";
 import { HelpButton } from "@/components/help/help-button";
 import { DueRecurringPrompt } from "@/components/recurring/due-recurring-prompt";
 import { findUnpromptedDueRules } from "@/lib/recurring";
 import { db } from "@/lib/db";
+import { formatDate } from "@/lib/dates";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -20,7 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-paper text-ink">
-      <IdleLogout />
+      <IdleLogout timeoutMs={IDLE_TIMEOUT_MS} />
       <DueRecurringPrompt
         key={due?.id}
         accounts={accounts}
@@ -32,7 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 type: due.type as "INCOME" | "EXPENSE",
                 amount: due.amount.toNumber(),
                 accountId: due.accountId,
-                dueDate: due.nextRunDate.toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }),
+                dueDate: formatDate(due.nextRunDate, { day: "numeric", month: "short", year: "numeric" }),
               }
             : null
         }

@@ -34,7 +34,7 @@ export async function proxy(request: NextRequest) {
   const isPublicPath = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
   const active = !!user && isActive(request.cookies.get(IDLE_COOKIE)?.value, user.id);
 
-  // Idle for 120s or browser was closed: revoke the session server-side too.
+  // Idle past IDLE_TIMEOUT_MS or browser was closed: revoke the session server-side too.
   if (user && !active) await supabase.auth.signOut({ scope: "local" });
   if (active) response.cookies.set(activityCookie(user.id));
 

@@ -31,6 +31,7 @@ model User {
   transactions          Transaction[]
   savings               Saving[]
   recurringTransactions RecurringTransaction[]
+  auditLogs             AuditLog[]
 
   @@map("users")
 }
@@ -239,4 +240,31 @@ model Quote {
   createdAt DateTime @default(now())
 
   @@map("quotes")
+}
+
+// ─────────────────────────────────────────────
+// Audit log — one row per write action, with the response the user got.
+// Written by lib/audit.ts; rows older than 90 days are deleted by the cron.
+// ─────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now())
+  userId     String
+  event      String // "transaction.create", "auth.sign_in", ...
+  success    Boolean
+  statusCode Int
+  response   Json
+  // Request details shown with the response. The path never includes the
+  // query string, so a token in a URL can't end up stored here.
+  method     String
+  path       String
+  ipAddress  String?
+  userAgent  String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, event, createdAt(sort: Desc)])
+  @@map("audit_logs")
 }

@@ -1,8 +1,7 @@
-// Mirrors the `TransactionType` enum in prisma/schema.prisma. Kept as a local
-// literal type (rather than importing from "@prisma/client") so this module
-// has no dependency on a generated client — it type-checks and is unit
-// -testable even before `prisma generate` has been run.
-export type TransactionType = "INCOME" | "EXPENSE" | "TRANSFER";
+import type { TransactionType } from "@prisma/client";
+import { sumMoney } from "@/lib/money";
+
+export type { TransactionType };
 
 export type AccountDelta = { accountId: string; delta: number };
 
@@ -57,8 +56,8 @@ export function categoryBreakdown(
     if (t.type !== type) continue;
     const key = t.categoryName ?? "Uncategorized";
     const amt = Math.abs(t.amount);
-    byCategory.set(key, (byCategory.get(key) ?? 0) + amt);
-    total += amt;
+    byCategory.set(key, sumMoney([byCategory.get(key) ?? 0, amt]));
+    total = sumMoney([total, amt]);
   }
 
   return Array.from(byCategory.entries())

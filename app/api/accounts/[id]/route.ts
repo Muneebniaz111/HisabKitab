@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/session";
 import { updateAccountSchema } from "@/lib/validations/account";
+import { withAudit } from "@/lib/with-audit";
 
 async function loadOwnedAccount(id: string, userId: string) {
   const account = await db.account.findUnique({ where: { id } });
@@ -9,7 +10,7 @@ async function loadOwnedAccount(id: string, userId: string) {
   return account;
 }
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const PATCH = withAudit("account.update", async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const userId = await getCurrentUserId();
 
@@ -24,9 +25,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const account = await db.account.update({ where: { id }, data: parsed.data });
   return NextResponse.json(account);
-}
+});
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withAudit((body) => (body?.isArchived === false ? "account.unarchive" : "account.archive"), async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   // Used for the archive / unarchive toggle: { "isArchived": true | false }.
   const { id } = await params;
   const userId = await getCurrentUserId();
@@ -45,9 +46,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     data: { isArchived: body.isArchived },
   });
   return NextResponse.json(account);
-}
+});
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const DELETE = withAudit("account.delete", async (_request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const userId = await getCurrentUserId();
 
@@ -68,4 +69,4 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 
   await db.account.delete({ where: { id } });
   return NextResponse.json({ deleted: true });
-}
+});

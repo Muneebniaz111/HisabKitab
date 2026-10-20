@@ -1,14 +1,7 @@
-// The Prisma client isn't generated in this build environment (see
-// README), so there's no real `Prisma.TransactionClient` type to import
-// here. `PrismaTx` stands in for it — every method used below (updateMany,
-// findUnique) exists on the real interactive-transaction client with a
-// compatible signature, so this is a documentation aid, not a precision
-// claim. See lib/types.ts for the same reasoning applied to model shapes.
-// Exported so route handlers can annotate their db.$transaction(async
-// (tx) => ...) callbacks — without an explicit type, `tx`'s type can't be
-// inferred from an `any`-typed `db` and TypeScript flags it (TS7006) in
-// this environment specifically.
-export type PrismaTx = any; // eslint-disable-line @typescript-eslint/no-explicit-any
+import type { Prisma } from "@prisma/client";
+
+// The client passed to db.$transaction(async (tx) => ...) callbacks.
+export type PrismaTx = Prisma.TransactionClient;
 
 export class InsufficientFundsError extends Error {
   constructor(message: string) {

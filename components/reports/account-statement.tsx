@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { Amount } from "@/components/ui/amount";
 import { CsvExportButton } from "@/components/reports/csv-export-button";
 import type { StatementRow } from "@/lib/types";
+import { formatDate } from "@/lib/dates";
 
 export function AccountStatement({
   accountName,
@@ -59,7 +60,7 @@ export function AccountStatement({
                   <p className="text-sm truncate">{r.description || r.counterpart}</p>
                   <p className="text-xs text-ink-muted truncate">
                     {r.counterpart} ·{" "}
-                    {new Date(r.date).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
+                    {formatDate(r.date, { day: "numeric", month: "short", year: "numeric" })}
                   </p>
                 </div>
               </div>

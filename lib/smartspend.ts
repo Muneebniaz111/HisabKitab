@@ -1,6 +1,8 @@
 // SmartSpend: rule-based insights from the user's own ledger. Pure — the page
 // loads the numbers, this turns them into advice and goal suggestions.
 
+import { sumMoney } from "@/lib/money";
+
 // Text with embedded amounts, so the page can render the amounts through
 // <Amount> and keep them hidden-by-default like everywhere else in the app.
 export type Line = (string | { amount: number })[];
@@ -36,7 +38,7 @@ export function buildInsights(i: SmartSpendInput, now = new Date()) {
     advice.push(["Record your salary or other income so SmartSpend can size a budget and savings target for you."]);
   }
   if (i.income && i.expenses > i.income) {
-    advice.push(["You've spent ", { amount: i.expenses - i.income }, " more than you earned this month. Hold off on non-essential purchases until your next income."]);
+    advice.push(["You've spent ", { amount: sumMoney([i.expenses, -i.income]) }, " more than you earned this month. Hold off on non-essential purchases until your next income."]);
   }
   const top = i.categories[0];
   if (top && top.percent >= 30) {
@@ -46,13 +48,13 @@ export function buildInsights(i: SmartSpendInput, now = new Date()) {
     advice.push([`${c.category} is at `, { amount: c.amount }, " against a usual ", { amount: Math.round(c.usual) }, ". Look for spending here you can skip."]);
   }
   if (savingsTarget && i.saved < savingsTarget) {
-    advice.push(["Aim to save ", { amount: savingsTarget }, " a month (20% of income). Move ", { amount: savingsTarget - i.saved }, " into a goal right after payday so it isn't spent."]);
+    advice.push(["Aim to save ", { amount: savingsTarget }, " a month (20% of income). Move ", { amount: sumMoney([savingsTarget, -i.saved]) }, " into a goal right after payday so it isn't spent."]);
   }
   if (!advice.length) advice.push(["You're living within your means and meeting your savings target. Keep it up!"]);
 
   const active = i.goals.filter((g) => g.current < g.target);
   const goals = active.map((g) => {
-    const remaining = g.target - g.current;
+    const remaining = sumMoney([g.target, -g.current]);
     const monthsLeft = g.targetDate ? Math.max(1, monthsUntil(now, g.targetDate)) : null;
     // With a deadline: what it takes. Without one: an even share of the surplus.
     const monthly = monthsLeft ? Math.ceil(remaining / monthsLeft) : Math.min(remaining, Math.round(surplus / active.length));
@@ -71,7 +73,7 @@ export function buildInsights(i: SmartSpendInput, now = new Date()) {
   // No goals yet: suggest the classic first one, three months of expenses as a safety net.
   const emergencyFund = !i.goals.length && (i.avgExpenses || i.expenses) > 0 ? Math.round((i.avgExpenses || i.expenses) * 3) : null;
 
-  return { savingsTarget, surplus, left: i.income - i.expenses - i.saved, rising, advice, goals, emergencyFund };
+  return { savingsTarget, surplus, left: sumMoney([i.income, -i.expenses, -i.saved]), rising, advice, goals, emergencyFund };
 }
 
 function monthsUntil(from: Date, to: Date) {

@@ -3,6 +3,8 @@ import { cn } from "@/lib/utils";
 import { Amount } from "@/components/ui/amount";
 import { CsvExportButton } from "@/components/reports/csv-export-button";
 import type { LedgerRow } from "@/lib/ledger-query";
+import { sumMoney } from "@/lib/money";
+import { formatDate } from "@/lib/dates";
 
 export function MonthlyLedger({
   monthLabel,
@@ -11,9 +13,9 @@ export function MonthlyLedger({
   monthLabel: string;
   rows: LedgerRow[];
 }) {
-  const totalIncome = rows.filter((r) => r.type === "INCOME").reduce((s, r) => s + r.amount, 0);
-  const totalExpenses = rows.filter((r) => r.type === "EXPENSE").reduce((s, r) => s + r.amount, 0);
-  const net = totalIncome - totalExpenses;
+  const totalIncome = sumMoney(rows.filter((r) => r.type === "INCOME").map((r) => r.amount));
+  const totalExpenses = sumMoney(rows.filter((r) => r.type === "EXPENSE").map((r) => r.amount));
+  const net = sumMoney([totalIncome, -totalExpenses]);
 
   const csvRows = rows.map((r) => [
     r.date.slice(0, 10),
@@ -87,7 +89,7 @@ export function MonthlyLedger({
                             ? `${r.categoryName} · ${r.accountName}`
                             : `${r.accountName} · ${r.categoryName}`}
                         {" · "}
-                        {new Date(r.date).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}
+                        {formatDate(r.date, { day: "numeric", month: "short" })}
                       </p>
                     </div>
                   </div>

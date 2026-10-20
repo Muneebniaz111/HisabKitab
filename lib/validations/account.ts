@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nonNegativeMoney } from "./money";
 
 // Mirrors the AccountType enum in prisma/schema.prisma.
 export const ACCOUNT_TYPES = ["BANK", "MOBILE_WALLET", "CASH", "OTHER"] as const;
@@ -13,10 +14,7 @@ export const ACCOUNT_TYPE_LABELS: Record<(typeof ACCOUNT_TYPES)[number], string>
 export const createAccountSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(60, "Keep it under 60 characters"),
   type: z.enum(ACCOUNT_TYPES),
-  openingBalance: z.coerce
-    .number({ error: "Enter a number" })
-    .finite()
-    .min(0, "Opening balance can't be negative"),
+  openingBalance: nonNegativeMoney,
 });
 
 export const updateAccountSchema = z.object({

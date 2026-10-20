@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { apiErrorMessage } from "@/lib/utils";
+import { MAX_AMOUNT } from "@/lib/validations/money";
+import { todayISO } from "@/lib/dates";
 
 export type Option = { id: string; name: string };
 export type TxType = "INCOME" | "EXPENSE" | "TRANSFER";
@@ -33,8 +35,6 @@ type Props = {
   expenseCategories: Option[];
 } & ({ mode: "create"; defaultType?: TxType } | { mode: "edit"; transaction: TransactionFormValues });
 
-const TODAY = () => new Date().toISOString().slice(0, 10);
-
 export function TransactionFormDialog(props: Props) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -46,7 +46,7 @@ export function TransactionFormDialog(props: Props) {
     return props.defaultType ?? "EXPENSE";
   });
   const [amount, setAmount] = React.useState(initial ? String(initial.amount) : "");
-  const [date, setDate] = React.useState(initial?.date ?? TODAY());
+  const [date, setDate] = React.useState(initial?.date ?? todayISO());
   const [description, setDescription] = React.useState(initial?.description ?? "");
   const [notes, setNotes] = React.useState(initial?.notes ?? "");
   const [accountId, setAccountId] = React.useState(initial?.accountId ?? props.accounts[0]?.id ?? "");
@@ -78,7 +78,7 @@ export function TransactionFormDialog(props: Props) {
   function resetForCreate() {
     setType("EXPENSE");
     setAmount("");
-    setDate(TODAY());
+    setDate(todayISO());
     setDescription("");
     setNotes("");
     setAccountId(props.accounts[0]?.id ?? "");
@@ -239,6 +239,7 @@ export function TransactionFormDialog(props: Props) {
                   type="number"
                   min="0.01"
                   step="0.01"
+                  max={MAX_AMOUNT}
                   inputMode="decimal"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}

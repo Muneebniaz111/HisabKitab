@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/session";
 import { createAccountSchema } from "@/lib/validations/account";
+import { withAudit } from "@/lib/with-audit";
 
 export async function GET(request: Request) {
   const userId = await getCurrentUserId();
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
   return NextResponse.json(accounts);
 }
 
-export async function POST(request: Request) {
+export const POST = withAudit("account.create", async (request: Request) => {
   const userId = await getCurrentUserId();
   const parsed = createAccountSchema.safeParse(await request.json());
 
@@ -32,4 +33,4 @@ export async function POST(request: Request) {
   });
 
   return NextResponse.json(account, { status: 201 });
-}
+});
