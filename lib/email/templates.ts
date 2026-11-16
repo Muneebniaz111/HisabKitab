@@ -1,3 +1,5 @@
+import { formatCurrency } from "@/lib/utils";
+
 const COLORS = {
   paper: "#ffffff",
   surface: "#ffffff",
@@ -10,7 +12,7 @@ const COLORS = {
 };
 
 function money(amount: number): string {
-  return `Rs. ${Math.round(Math.abs(amount)).toLocaleString("en-PK")}`;
+  return formatCurrency(Math.abs(amount));
 }
 
 function layout(title: string, bodyHtml: string, footerNote?: string): string {

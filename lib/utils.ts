@@ -8,8 +8,8 @@ export function cn(...inputs: ClassValue[]) {
 export function formatCurrency(amount: number | string, currency = "Rs.") {
   const value = typeof amount === "string" ? parseFloat(amount) : amount;
   const formatted = new Intl.NumberFormat("en-PK", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(Math.abs(value));
   const sign = value < 0 ? "-" : "";
   return `${sign}${currency} ${formatted}`;

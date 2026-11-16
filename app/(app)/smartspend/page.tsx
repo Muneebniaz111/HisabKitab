@@ -85,7 +85,7 @@ export default async function SmartSpendPage() {
           </Tile>
           <Tile icon={BarChart3} label="Expenses (this month)" value={input.expenses} tone="text-debit">
             {input.categories[0] && <p className="truncate">Most on {input.categories[0].category} ({input.categories[0].percent}%)</p>}
-            {input.avgExpenses > 0 && <Sub label="Usual month" value={Math.round(input.avgExpenses)} />}
+            {input.avgExpenses > 0 && <Sub label="Usual month" value={input.avgExpenses} />}
           </Tile>
           <Tile icon={PiggyBank} label="Saved (this month)" value={input.saved} tone="text-accent">
             {insights.savingsTarget > 0 && (

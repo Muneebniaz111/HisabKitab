@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { formatCurrency } from "@/lib/utils";
 
 // The client passed to db.$transaction(async (tx) => ...) callbacks.
 export type PrismaTx = Prisma.TransactionClient;
@@ -43,7 +44,7 @@ export async function decrementBalanceOrThrow(
     const account = await tx.account.findUnique({ where: { id: accountId } });
     const available = account ? Number(account.currentBalance) : 0;
     throw new InsufficientFundsError(
-      `Insufficient funds in ${accountName}. Available: Rs. ${available.toLocaleString("en-PK")}, required: Rs. ${amount.toLocaleString("en-PK")}.`
+      `Insufficient funds in ${accountName}. Available: ${formatCurrency(available)}, required: ${formatCurrency(amount)}.`
     );
   }
 }
@@ -64,7 +65,7 @@ export async function decrementSavingOrThrow(
     const saving = await tx.saving.findUnique({ where: { id: savingId } });
     const available = saving ? Number(saving.currentAmount) : 0;
     throw new InsufficientFundsError(
-      `Only Rs. ${available.toLocaleString("en-PK")} is available to withdraw from "${savingName}".`
+      `Only ${formatCurrency(available)} is available to withdraw from "${savingName}".`
     );
   }
 }

@@ -4,6 +4,7 @@ import { getCurrentUserId } from "@/lib/session";
 import { getAccounts } from "@/lib/accounts";
 import { ensureDefaultCategories } from "@/lib/categories";
 import { fetchUnifiedLedger } from "@/lib/ledger-query";
+import { monthRange } from "@/lib/date-range";
 import { TransactionFilters } from "@/components/transactions/transaction-filters";
 import { TransactionFormDialog } from "@/components/transactions/transaction-form-dialog";
 import { TransactionList } from "@/components/transactions/transaction-list";
@@ -34,7 +35,9 @@ export default async function TransactionsPage({
     type: params.type,
     accountId: params.accountId,
     categoryId: params.categoryId,
-    month: params.month,
+    // The month picker shows the current month when none is chosen, so the
+    // list has to default to it too.
+    month: monthRange(params.month).value,
   });
 
   const accountOptions = accounts.map((a) => ({ id: a.id, name: a.name }));
