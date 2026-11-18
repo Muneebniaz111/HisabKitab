@@ -98,8 +98,8 @@ export default async function DashboardPage() {
         </Suspense>
 
         <div className="border border-rule bg-surface rounded-sm px-6 sm:px-8 py-6 sm:py-7">
-          <p className="text-xs uppercase tracking-[0.14em] text-ink-muted mb-2">Total Balance</p>
-          <Amount value={totalBalance} className="ledger-amount font-display text-3xl sm:text-4xl" />
+          <p className="text-xs uppercase tracking-[0.14em] text-ink-muted mb-3">Total Balance</p>
+          <Amount value={totalBalance} className="ledger-amount font-display text-3xl sm:text-4xl leading-[1.25] py-0.5" />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
